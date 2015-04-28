@@ -1,0 +1,53 @@
+<?php
+// $Id: admin_changepassword.module
+/**
+* @uthor VIsions Team
+* 22/04/2015 */
+
+
+function drupal_custom_permission(){
+	return array('Drupal Hook'  => array('title' => t('Drupal Hook')));
+}
+function drupal_custom_form_alter(&$form, &$form_state, $form_id) 
+{
+	//echo '<pre>'; print_r($form); exit;
+	if($form_id == "user_register_form")
+	{
+		$form['account']['name']['#title'] = t('Name');
+		unset($form['account']['name']['#description']);
+		unset($form['account']['pass']['#description']);
+		unset($form['account']['mail']['#description']);
+		$form['account']['mail']['#title'] = t('Email.');
+		$form['account']['pass']['#type'] = 'password';
+		$form['account']['pass']['#title'] = 'Password';
+		$form['account']['pass']['#title'] = 'Password';
+	}
+	if($form_id == "user_login")
+	{
+		unset($form['name']['#description']);
+		unset($form['pass']['#description']);
+	}
+	
+	switch ($form_id) 
+	{
+		case 'user_register_form':
+			$form['#submit'][] = 'custom_user_register_submit';
+				break;
+    }
+	
+	if($form_id == "news_node_form")
+	{
+		$form['body']['und']['0']['#title'] = t('Summary');
+	}
+	
+}
+
+function custom_user_register_submit($form, &$form_state) {
+ 
+	global $base_url;
+	$redirectUrl = $base_url.'/?getstarted=yes';
+	$form_state['redirect'] = $redirectUrl;
+}
+
+
+

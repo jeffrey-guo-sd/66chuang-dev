@@ -1,0 +1,40 @@
+name = 66 Chuang
+description = Theme for 66chuang website design
+package = Core
+version = VERSION
+core = 7.x
+
+stylesheets[all][] = css/bootstrap.css
+stylesheets[all][] = css/style.css
+stylesheets[all][] = css/font-awesome.min.css
+
+; Scripts
+scripts[] = js/bootstrap.min.js
+
+regions[header] = Header
+regions[help] = Help
+regions[page_top] = Page top
+regions[page_bottom] = Page bottom
+regions[highlighted] = Highlighted
+
+regions[content] = Content
+regions[home_news] = News Block
+regions[home_discussion] = Discussion
+regions[get_started] = Get Started
+regions[user_register] = User Registration Block
+regions[sidebar_first] = Sidebar first
+regions[sidebar_second] = Sidebar second
+
+regions[footer_firstcolumn] = Footer first column
+regions[footer_secondcolumn] = Footer second column
+regions[footer_thirdcolumn] = Footer third column
+regions[footer_fourthcolumn] = Footer fourth column
+regions[footer] = Footer
+
+settings[shortcut_module_link] = 0
+
+
+; Copyright Visions@2015
+project = "drupal"
+datestamp = "1427943826"
+

@@ -1,0 +1,298 @@
+<?php
+// $Id: admin_changepassword.module
+/**
+* @uthor VIsions Team
+* 23/04/2015 */
+
+/*************Set Permission*****************/
+
+function custom_startup_permission(){
+	return array(
+		STARTUPCOMPANYFORM  => array('title' => t(STARTUPCOMPANYFORM)));
+}
+
+/***************Create Menu*****************/
+
+function custom_startup_menu()
+{
+	$items['company'] = array(
+		'title' => COMPANYPROFILETITLE,
+		'page callback' => array('startup_profile_company_form'),
+		'access arguments' => array(STARTUPCOMPANYFORM),
+		'access callback' => 'user_access',
+		'type' => MENU_CALLBACK 
+	);
+	return $items;
+}
+
+function startup_profile_company_form()
+{
+	$output = '';
+	$output .= '<div class="c-tabouter"><a href="#" class="startUpcompany active">'.COMPANYBUTTON.'</a><a href="#" class="startUpteam">'.TEAMBUTTON.'</a></div>';
+	$output .= @drupal_render(drupal_get_form('startup_company_form'));
+	return $output;
+}
+
+
+function startup_company_form()
+{
+	global $user,$base_url,$theme_path;
+	$form['compantinformation'] = array(
+		'#type' => 'item',
+		'#markup' => "<h4 style='margin-bottom:20px;'>".COMPANYINFOTEXT."</h4>",
+		'#prefix'=>'<div class="c-forminner">',
+    );
+	$form['companyname'] = array(
+		'#type' => 'textfield',
+		'#title' => t(COMPANYNAME),
+		'#maxlength' => 50,
+		'#attributes' => array('class'=> array('companyname')),
+		'#required' => TRUE,
+		'#size' => 50,
+	);
+	$form['logo'] = array(
+		'#type' => 'file',
+		'#title' => t(COMPANYLOGO),
+		'#attributes' => array('class'=> array('companylogo')),
+	);	
+	$form['highconceptpitch'] = array(
+		'#type' => 'textfield',
+		'#title' => t(HIGHCONCEPTPITCH),
+		'#attributes' => array('class'=> array('highconceptpitch')),
+		'#size' => 50,
+	);
+	$form['companywebsite'] = array(
+		'#type' => 'textfield',
+		'#title' => t(COMPANYWEBSITE),
+		'#attributes' => array('class'=> array('companywebsite')),
+		'#size' => 50,
+	);	
+	$form['product'] = array(
+		'#type' => 'textarea',
+		'#title' => t(PRODUCT),
+		'#attributes' => array('class'=> array('producttextarea')),
+	);
+	$form['divider1'] = array(
+		'#type' => 'item',
+		'#markup' => '<hr>',
+	);
+	$form['location'] = array(
+		'#type' => 'textfield',
+		'#title' => t(LOCATION),
+		'#attributes' => array('class'=> array('location')),
+		'#size' => 50,
+	);
+	$form['markets'] = array(
+		'#type' => 'textfield',
+		'#title' => t(MARKETS),
+		'#attributes' => array('class'=> array('markets')),
+		'#size' => 50,
+		'#suffix'=>'</div>',
+	);	
+	$form['whyareyouhere'] = array(
+		'#type' => 'item',
+		'#markup' => "<h4 style='margin-bottom:20px;'>".WHYAREYOUHERE."</h4>",
+		'#prefix'=>'<div class="c-forminner padd">',
+    );
+	$form['fundraising'] = array(
+		'#type' => 'checkbox',
+		'#title' => t(FUNDRAISING),
+		'#attributes' => array('class'=> array('fundraising')),
+	);
+	$form['fundraisingdescription'] = array(
+		'#type' => 'item',
+		'#markup' => "<p style='margin-bottom:20px;'>".FUNDRAISINGDESCRIPTION."</p>",
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+		'#prefix'=>'<div class="c-forminner-inner hide fundraisingg"><div class="c-outer">',
+    );
+	$form['raising'] = array(
+		'#type' => 'textfield',
+		'#title' => t(RAISING),
+		'#attributes' => array('class'=> array('raising')),
+		'#size' => 50,
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+	);
+	$form['debtequitysafe'] = array(
+		'#type' => 'textfield',
+		'#title' => t(DEBTEQUITYSAFE),
+		'#attributes' => array('class'=> array('debtequitysafe')),
+		'#size' => 50,
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+	);
+	$form['debtequitysafe'] = array(
+		'#type' => 'select',
+		'#title' => t(DEBTEQUITYSAFE),
+		'#options' => array(t(SELECT), t(EQUITY), t(CONVERTIBLEDEBT), t(SAFE)),
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+	);
+	$form['premoneyvaluation'] = array(
+		'#type' => 'textfield',
+		'#title' => t(PREMONEYVALUATION),
+		'#attributes' => array('class'=> array('premoneyvaluation')),
+		'#size' => 50,
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+	);
+	$form['browsevaluations'] = array(
+		'#type' => 'item',
+		'#markup' => "<p style='margin-bottom:20px;'>".BROWSEVALUATIONS."</p>",
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+    );
+	$form['previousfunding'] = array(
+		'#type' => 'textfield',
+		'#title' => t(PREVIOUSFUNDING),
+		'#attributes' => array('class'=> array('previousfunding')),
+		'#size' => 50,
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+	);
+	
+	$form['terms'] = array(
+		'#type' => 'item',
+		'#markup' => "<p style='margin-bottom:20px;'><b>".COMPANYTERMS." </b>".COMPANYTERMSSOMEREMINDER."
+		<ul>
+			<li>".COMPANYTERMSFIRSTTEXT."</li>
+			<li>".COMPANYTERMSSECONDTEXT."</li>
+			<li>".COMPANYTERMSTHIRDTEXT."</li></ul></p>",
+		'#states' => array(
+			'visible' => array(
+				':input[name="fundraising"]' => array('checked' => TRUE),
+			),
+		),
+	'#suffix'=>'</div></div>',	
+    );
+	$form['recruiting'] = array(
+		'#type' => 'checkbox',
+		'#title' => t(COMPANYRECRUITING),
+		'#attributes' => array('class'=> array('recruiting')),
+	);
+	$form['recruitingdescription'] = array(
+		'#type' => 'item',
+		'#markup' => "<p style='margin-bottom:20px;'>".COMPANYRECRUITINGDESCRIPTION."</p>",
+    );
+	$form['applyingtoanincubator'] = array(
+		'#type' => 'checkbox',
+		'#title' => t(APPLYINGINCUBATOR),
+		'#attributes' => array('class'=> array('applyingtoanincubator')),
+	);
+	$form['incubatordescription'] = array(
+		'#type' => 'item',
+		'#markup' => "<p style='margin-bottom:20px;'>".APPLYINGINCUBATORDESCRIPTION."</p>",
+		'#suffix'=>'</div>',
+    );
+	
+	$form['termsofservicedescription'] = array(
+		'#type' => 'item',
+		'#markup' => "<h4 style='margin-bottom:20px;'>".TERMSOFSERVICEDESCRIPTION."</h4>",
+		'#prefix'=>'<div class="c-forminner">',
+    );
+	$form['termsofservice'] = array(
+		'#type' => 'checkbox',
+		'#title' => t(COMPANYTERMSOFSERVICE),
+		'#attributes' => array('class'=> array('termsofservice')),
+		'#required' => TRUE,
+		'#suffix'=>'</div>',
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#default_value' => COMPANYSUBMITBUTTON, 
+		'#attributes'=>array('style'=>'margin-bottom:10px;'),
+                '#prefix'=>'<div class="submit-outer">',
+                '#suffix'=>'</div>',
+	);
+	return $form;
+	
+}
+
+/**************Company Profile Submit*****************/
+
+function startup_company_form_submit($form, &$form_state)
+{
+		//echo '<pre>'; print_r($_POST); exit;
+		global $user;
+		$path=$_FILES["files"]["tmp_name"]['logo'];
+		$image_name=$_FILES["files"]["name"]['logo'];
+		$filename = stripslashes($_FILES['files']['name']['logo']);
+		$folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companylogo/';
+		if(!empty($filename)): 
+			$extension = getExtension($filename);  // get file name
+			$extension = strtolower($extension);	// get extension
+			if($extension!= JPG and $extension!= JPEG and $extension!= GIF and $extension!= PNG):
+				form_set_error('file', t(FILEEXTENSION));
+			else:
+				$id = insertCompanyProfileData($form_state['values']);
+				$randNum = RandomString(6);
+				$filename =  'BA_'.$randNum.'_'.$id.'.'.$extension;  // filename
+				if(file_exists($folderPath.$filename)):
+					unlink($folderPath.$filename); 
+				endif; 
+				move_uploaded_file($path,$folderPath.$filename);		 
+			endif; 
+			updateLogoName($filename,$id);			
+			drupal_set_message(COMPANYPROFILESUCCESSMESSAGE);
+			drupal_goto('company');
+		endif;
+}
+
+
+
+
+/***************Login form changes*******************/
+
+function custom_startup_preprocess_page(&$vars) {
+  global $user , $base_url;
+  $imgpath = $base_url.'/sites/all/themes/chuang/images/we-bar.png';
+    
+  if ($user->uid == 0) {
+    $vars['loginpopup'] = "<div class='dropdown-menu  row' role='menu'><div class='col-sm-6 col-xs-12 field-part'>";
+    $vars['loginpopup'] .= "<div id='login-pop'>" ;
+    $vars['loginpopup'] .= drupal_render(drupal_get_form('user_login'));
+    $vars['loginpopup'] .= "</div></div>";
+    $vars['loginpopup'] .= "<div class='col-sm-6 col-xs-12 we-chat-part'><div class='c-head'>Use your <b>WeChat</b> account for signup <i class='fa fa-weixin'></i>";
+    $vars['loginpopup'] .= "</div><img class='we-code' src=".$imgpath." alt=''/><label>Scan this QR Code for login</label>";
+    $vars['loginpopup'] .= "</div>";
+    $vars['loginpopup'] .= "</div>";
+  }
+  
+    if ($user->uid == 0) {
+    $vars['registerpopup'] = "<div class='dropdown-menu  row' role='menu'><div class='col-sm-6 col-xs-12 field-part'>";
+    $vars['registerpopup'] .= "<div id='login-pop'>" ;
+    $vars['registerpopup'] .= drupal_render(drupal_get_form('user_register_form'));
+    $vars['registerpopup'] .= "</div></div>";
+    $vars['registerpopup'] .= "<div class='col-sm-6 col-xs-12 we-chat-part'><div class='c-head'>Use your <b>WeChat</b> account for signup <i class='fa fa-weixin'></i>";
+    $vars['registerpopup'] .= "</div><img class='we-code' src=".$imgpath." alt=''/><label>Scan this QR Code for login</label>";
+    $vars['registerpopup'] .= "</div>";
+    $vars['registerpopup'] .= "</div>"; 
+  }
+  
+}
+
+
+
+

@@ -1,0 +1,12 @@
+; $Id: alter_function.info,v 1.5 2007/06/08 05:50:53 dries Exp $
+name = Start Up Form.
+description = Start Up Form. 
+package = Drupal ALter
+version = VERSION
+core = 7.x
+
+; Information added by drupal.org packaging script on 2010-10-12
+version = "7.x-1.4"
+project = "EFOR"
+datestamp = "1281559292"
+             
