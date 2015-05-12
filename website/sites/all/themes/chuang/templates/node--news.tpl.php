@@ -98,11 +98,12 @@ $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
                 <div class="container">
 				
 				<div class="news-section-container newsdetail">
+                    <input type="hidden" value="<?php echo $template_path; ?>" class="basepath"/>
 					<div class="news-section">
 					<h3><?php   print $title;   ?></h3>
 					  <?php if ($display_submitted): ?>
 							<div class="meta submitted">
-							  <?php print $user_picture; ?>
+							  <?php //print $user_picture; ?>
 							  <?php print $submitted; ?>
 							  <ul class='social-outer'>
                                         <li><a href="#" class='fb1'></a></li>
@@ -115,16 +116,53 @@ $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
 					  <?php endif; ?>
 					  
 						<!-- banner block starts here-->
-						<?php  print render($content); ?>
+						<?php 
+					
+							$ifid = strip_tags($fields['field_wallpaper']->content);
+							$imgpath = file_load($field_news_image[0]['fid'])->uri;
+							$imgUrl =  file_create_url($imgpath); ?>
+							<?php print theme('image_style',array('style_name' => 'news_detail', 'path' => $imgpath));	?>
+							<div class="news-content"><?php   print $body[0]['value']  ?></div>
+							<div class="comment-textarea"><div id="comment-error"></div><div class="comment_inner"><!--<img src="<?php echo $template_path.'/images/user_default.jpg'; ?>" />--><?php
+							global $user;
+							//if($user->uid != 0){
+							print drupal_render(drupal_get_form("comment_node_{$node->type}_form", (object) array('pid' => $pid, 'nid' => $node->nid)));
+							//}
+
+?></div></div>
+<?php 
+	//echo '<pre>'; print_r($node); die();
+
+?>
+<?php
+unset($content['comments']['comment_form']);
+ //$comments = array_reverse ($content['comments']);
+ //print render($content['comments']);   //die(); ?>
+ <?php
+    // Remove the "Add new comment" link on the teaser page or if the comment
+    // form is being displayed on the same page.
+    if ($teaser || !empty($content['comments']['comment_form'])) {
+      unset($content['links']['comment']['#links']['comment-add']);
+    }
+    // Only display the wrapper div if there are links.
+    $links = render($content['links']);
+    if ($links):
+  ?>
+    <div class="link-wrapper comment-login-link">
+      <?php //print $links; ?>
+    </div>
+  <?php endif; ?>
+
+  <?php print render($content['comments']); ?>
 					</div>
 					
 					<div class="right-panel">
                             <!-- discussion block -->
                             <div class="list-group discussion-group">
-                                <h4 class="list-group-item title blue-text">
+                               <!-- <h4 class="list-group-item title blue-text">
                                     Discussion
-                                </h4>
-								<?php print render($page['home_discussion']); ?>
+                                </h4>-->
+								<?php //print render($page['home_discussion']); ?>
                             </div>
 							 <div class="list-group discussion-group update">
                                 <h4 class="list-group-item title blue-bg">

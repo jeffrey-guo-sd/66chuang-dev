@@ -1,297 +1,1309 @@
 <?php
 // $Id: admin_changepassword.module
-/**
-* @uthor VIsions Team
-* 23/04/2015 */
 
-/*************Set Permission*****************/
+	/*************Set Permission*****************/
 
-function custom_startup_permission(){
-	return array(
-		STARTUPCOMPANYFORM  => array('title' => t(STARTUPCOMPANYFORM)));
-}
+	function custom_startup_permission(){
+		return array(
+			STARTUPCOMPANYFORM  => array('title' => t(STARTUPCOMPANYFORM)	));
+	}
+	/***************Create Menu*****************/
+	function custom_startup_menu(){
+		$items['company'] = array(
+			'title' => COMPANYPROFILETITLE,
+			'page callback' => array('startup_profile_company_form'),
+			'access arguments' => array(STARTUPCOMPANYFORM),
+			'access callback' => 'user_access',
+			'type' => MENU_CALLBACK 
+		);
+		$items['my-profile'] = array(
+			'title' => TEAM,
+			'page callback' => array('custom_startup_user_profile'),
+			'access arguments' => array(STARTUPCOMPANYFORM),
+			'access callback' => 'user_access',
+			'type' => MENU_CALLBACK 
+		);
+		$items['startups'] = array(
+			'title' => STARTUPS,
+			'description' => STARTUPSDESCRIPTION,
+			'page callback' => 'custom_startup_trending_page',
+			'access callback' => TRUE,
+		);
+		$items['startup/%'] = array(
+			'title' => 'Company Dashboard',
+			'page callback' => 'custom_startup_company_dashboard',
+			'access callback' => TRUE,
+		);
+		$items['profile/%'] = array(
+			'title' => 'Profile',
+			'page callback' => 'custom_startup_view_profile',
+			'access callback' => TRUE,
+		);
+        $items['profile/update'] = array(
+                'title' => 'Profile',
+                'page callback' => 'Checklockunlock',
+                'access arguments' => array(STARTUPCOMPANYFORM),
+                'access callback' => 'user_access',
+                'type' => MENU_CALLBACK 
+        );
+        $items['experince/update'] = array(
+                'title' => 'Profile',
+                'page callback' => 'updateExperinceData',
+                'access arguments' => array(STARTUPCOMPANYFORM),
+                'access callback' => 'user_access',
+                'type' => MENU_CALLBACK 
+        );
+        $items['companylist/autocomplete'] = array(
+            'title' => 'Autocomplete for cities',
+            'page callback' => 'companylist_autocomplete',
+            'access arguments' => array(STARTUPCOMPANYFORM),
+            'type' => MENU_CALLBACK
+        );
+		return $items;
+	}
+    function companylist_autocomplete($string = '') {
+        $matches = array();
+        global $user;
+       if (!empty($string)) {
+            $res = db_select('chuang_startup', 's')
+                ->fields('s')
+                ->condition('CompanyName',db_like($string) . '%', 'LIKE')
+                ->distinct()
+                ->range(0, 10)
+                ->execute()
+                ->fetchAll();
+             foreach($res as $val){
+                  $result = db_select('chuang_user_startup', 's')
+                    ->fields('s')
+                    ->condition('user_id', $user->uid)
+                    ->condition('startup_id', $val->Id)
+                    ->execute()
+                    ->fetch();
+                    if(empty($result)){
+                        $matches[$val->CompanyName.'-'.$val->Id] = check_plain($val->CompanyName);
+                    }                 
+             }               
+        } 
+      
+       drupal_json_output($matches);
+    }
+    function updateExperinceData(){
+        $name = $_POST['experince'];
+        $exploadname = explode('-',$name);
+       $sid = end($exploadname);
+        global $user, $base_url;
+        $result = db_select('chuang_user_startup', 's')
+            ->fields('s')
+            ->condition('user_id', $user->uid)
+            ->condition('startup_id', $sid)
+            ->execute()
+            ->fetchAll();
+            db_insert('chuang_user_startup') // Table name no longer needs {}
+                    ->fields(array(
+                      'startup_id' => $sid,
+                      'user_id' => $user->uid,
+                    ))
+                ->execute(); 
+         $startup_data = drupal_custom_startup_alldata($user->uid);
+            if(count($startup_data) > 0) {
+            $i = 1;
+            $output == '';
+            $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
+            foreach($startup_data as $val){
+               $startupdata = drupal_custom_startup_singledata($val->startup_id);
+               if(!empty($startupdata->Logo)){
+                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$startupdata->Logo;
+                }
+                else{
+                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
+                }
+                $encoded = urlencode( base64_encode( $startupdata->Id.'-'.$startupdata->CompanyName ) );
+                if($i%2 == 1){
+                    $output .=  '<div class="row">
+                                    <div class="col-sm-6 col-xs-12">
+                                        <div class="card-inner">
+                                            <span class="company">
+                                               <a href="'.$base_url.'/startup/'.$encoded.'"><img src="'.$logoUrl.'" /></a>
+                                            </span>
+                                             <h6><a href="'.$base_url.'/startup/'.$encoded.'">'.$startupdata->CompanyName.'</a></h6>
+                                             <h6>Founder</h6>
+                                            <label>'.$startupdata->HighLevelPitch.'</label>
+                                        </div>
+                                    </div>';
+                             
+                }
+                else{
+                    $output .= '<div class="col-sm-6 col-xs-12">
+                                        <div class="card-inner">
+                                            <span class="company">
+                                               <a href="'.$base_url.'/startup/'.$encoded.'"><img src="'.$logoUrl.'" /></a>
+                                            </span>
+                                             <h6><a href="'.$base_url.'/startup/'.$encoded.'">'.$startupdata->CompanyName.'</a></h6>
+                                             <h6>Founder</h6>
+                                            <label>'.$startupdata->HighLevelPitch.'</label>
+                                        </div>
+                                    </div></div>';
+                }
+                $i++;
+            }
+            if($i%2 == 1){
+                $output .= '</div>';
+            }
+         }
+         echo $output;
+    }
+    function Checklockunlock(){
+       $name = $_POST['name'];
+       $miniresume = $_POST['miniresume'];
+       $data['name'] = $name;
+       $data['resume'] = $miniresume;
+       global $user,$base_url;
+       $id = $user->uid;
+       $path=$_FILES["files"]["tmp_name"]['profileimage'];
+       $image_name=$_FILES["files"]["name"]['profileimage'];
+       $filename = stripslashes($_FILES['files']['name']['profileimage']);
+       $folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/profilephoto/';
+       if(!empty($filename)): 
+            $extension = getExtension($filename);  // get file name
+            $extension = strtolower($extension);    // get extension
+            if($extension!= JPG and $extension!= JPEG and $extension!= GIF and $extension!= PNG):
+                form_set_error('file', t(FILEEXTENSION));
+            else:
+                $randNum = RandomString(6);
+                $filename =  'PP_'.$randNum.'_'.$id.'.'.$extension;  // filename
+                if(file_exists($folderPath.$filename)):
+                    unlink($folderPath.$filename); 
+                endif; 
+                move_uploaded_file($path,$folderPath.$filename);         
+            endif; 
+            updateProfileImage($filename,$id);  
+        endif;
+        $date = date("Y-m-d H:i:s");
+        db_update('chuang_user')->fields(array(
+                'name' => $data['name'],
+                'modified_date'=> $date,
+                'modified_by'=> $user->uid,
+                'mini_resume'=> $data['miniresume'],
+                'modified_ip'=> $_SERVER['REMOTE_ADDR'],
+                ))
+                ->condition('drupal_user_id', $user->uid)
+                ->execute();
+        $profile_data = drupal_custom_profile_data($user->uid);
+        $startup_data = drupal_custom_startup_data($user->uid);
+        $profileImage = $profile_data->profile_image;
+        $name = $profile_data->name;
+        $miniresume = $profile_data->mini_resume;
+        if(!empty($profileImage)){
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+        }
+        else{
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
+        }
+        $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');  
+        $html = '<span class="user"> <img src="'.$profileImage.'"/>
+                                </span>
+                                <h2>'.$name.'</h2>';
+                                 if(!empty($startup_data->CompanyName)){
+                                     $encoded = urlencode( base64_encode( $startup_data->Id.'-'.$startup_data->CompanyName ) );
+                                       $html .= '<h6> <a href="'.$base_url.'/startup/'.$encoded.'">'.$startup_data->CompanyName.'</a></h6>';
+                                }                                 
+                                $html .= '';
+                                echo $html;                        
+           
+    }
+	function custom_startup_view_profile(){
+		global $base_url, $user;
+        $uid = $user->uid; 
+        $viewuserid = arg(1);
+        $profile_data = drupal_custom_profile_data($viewuserid);
+        $startup_data = drupal_custom_startup_data($viewuserid);
+        $profileImage = $profile_data->profile_image;
+        $name = $profile_data->name;
+        $miniresume = $profile_data->mini_resume;
+        if(!empty($profileImage)){
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+        }
+        else{
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
+        }
+		$template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
+		$html = '   <!-- top promo section -->
+                    <div class="promo" >
+                        <div class="top-section1">
+                            <div class="left1 view-edit">
+                                <span class="user">
+                                    <img src="'.$profileImage.'"/>
+                                </span>
+                                <h2>'.$name.'</h2>';
+                                 if(!empty($startup_data->CompanyName)){
+                                        $encoded = urlencode( base64_encode( $startup_data->Id.'-'.$startup_data->CompanyName ) );
+                                        $html .= '<h6> <a href="'.$base_url.'/startup/'.$encoded.'">'.$startup_data->CompanyName.'</a></h6>';
+                                }                                 
+                                $html .= '</div>';
+                            $output = '';
+                            $output .= drupal_render(drupal_get_form('custom_startup_team_form'));
+                           // echo '<pre>'; print_r($output); die();
+                            $html .= '<div class="basic-edit">'.$output.'</div>';
+                            $html .= '<div class="right1">';
+                              if($uid == $viewuserid){
+                                        $html .= '<a href="javascript:void(0);" class="edit-pro editprofile"><i class="fa fa-pencil"></i>Edit</a>';
+                                    }
+                                    else{
+                                        if($user->uid != 0){
+                                            $result = db_select('chuang_follow', 's')
+                                                ->fields('s')
+                                                ->condition('from_id', $user->uid)
+                                                ->condition('to_id', $viewuserid)
+                                                ->condition('to_type', 1)
+                                                ->execute()
+                                                ->fetch();
+                                            if(!empty($result)){
+                                                $output = '';
+                                                $output .= drupal_render(drupal_get_form('followes_unfollow_user_form',$viewuserid));
+                                                $html .= '<div class="follow">'.$output.'</div>';     
+                                            }
+                                            else{
+                                                $output = '';
+                                                $output .= drupal_render(drupal_get_form('followes_follow_user_form',$viewuserid));
+                                                $html .= '<div class="follow">'.$output.'</div>';
+                                            }
+                                        }
+                                        else{
+                                           $html .= '<div class="notfollow"><a href="javascript:void(0);" class="button anonymousfollow">Follow</a></div>'; 
+                                        }
+                                    }
+                            $count = get_user_following_count($viewuserid);
+                            if(count($count) > 0){
+                                    $userfollowing = $count.' Following';
+                            }
+                            else{
+                                $userfollowing = 'No Following';
+                            }
+                             $counting = get_user_followers_count($viewuserid);
 
-/***************Create Menu*****************/
+                            if(count($counting) > 0){
+                                    $userfollow = $counting.' Followers';
+                            }
+                            else{
+                                $userfollow = 'No Followers';
+                            }
+                             $followeresultcount = db_select('chuang_follow', 's')
+                                ->fields('s')
+                                ->condition('to_id', $viewuserid)
+                                ->execute()
+                                ->fetchAll();
+                             $html .= '<div class="a-info-outer"><span class="button info userfollowing">'.$userfollowing.'</span>
+                               <span class="button info userfollowers">'.$userfollow.'</span>
+                            </div>
+                        </div> </div>
+                        <div class="bottom-section1">
+                            <ul>
+                                <li><a href="#" class="active">Overview</a></li>
+                                <li><a href="#">Activity</a></li>
+                                <li><a href="'.$base_url.'/profile/'.$viewuserid.'/followers">Followers<span class="countfollower">'.count($followeresultcount).'</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-function custom_startup_menu()
-{
-	$items['company'] = array(
-		'title' => COMPANYPROFILETITLE,
-		'page callback' => array('startup_profile_company_form'),
-		'access arguments' => array(STARTUPCOMPANYFORM),
-		'access callback' => 'user_access',
-		'type' => MENU_CALLBACK 
-	);
-	return $items;
-}
 
-function startup_profile_company_form()
-{
-	$output = '';
-	$output .= '<div class="c-tabouter"><a href="#" class="startUpcompany active">'.COMPANYBUTTON.'</a><a href="#" class="startUpteam">'.TEAMBUTTON.'</a></div>';
-	$output .= @drupal_render(drupal_get_form('startup_company_form'));
-	return $output;
-}
+                    <div class="news-section-container ">
+                        <div class="news-section ">
+                            <!-- Experiencesection starts here -->
+                            <h3>Experience</h3>';
+
+                            if($uid == $viewuserid){
+                                   $html .= '<span class="formbutton"><a href="javascript:void(0);" class="experiencebutton">Add Experince</a><a href="javascript:void(0);" class="disableexperiencebutton">Add Experince</a></span>';
+                            }
+                         
+                             $output = '';
+                            $output .= drupal_render(drupal_get_form('custom_startup_experience_form'));
+                            $html .= '<div class="experiecnce-edit block2-outer">'.$output.'</div>';
+                            $html .= '<div class="block2-outer product experiencedetail">';
+        $startup_data = drupal_custom_startup_alldata($viewuserid);
+            if(count($startup_data) > 0) {
+            $i =0;
+            $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
+            foreach($startup_data as $val){
+                 $i++;
+               $startupdata = drupal_custom_startup_singledata($val->startup_id);
+               if(!empty($startupdata->Logo)){
+                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$startupdata->Logo;
+                }
+                else{
+                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
+                }
+                $encoded = urlencode( base64_encode( $startupdata->Id.'-'.$startupdata->CompanyName ) );
+                if($i%2 == 1){
+                    $html .=  '<div class="row">
+                                    <div class="col-sm-6 col-xs-12">
+                                        <div class="card-inner">
+                                            <span class="company">
+                                               <a href="'.$base_url.'/startup/'.$encoded.'"><img src="'.$logoUrl.'" /></a>
+                                            </span>
+                                             <h6><a href="'.$base_url.'/startup/'.$encoded.'">'.$startupdata->CompanyName.'</a></h6>
+                                             <h6>Founder</h6>
+                                            <label>'.$startupdata->HighLevelPitch.'</label>
+                                        </div>
+                                    </div>';
+                             
+                }
+                else{
+                    $html .= '<div class="col-sm-6 col-xs-12">
+                                        <div class="card-inner">
+                                            <span class="company">
+                                               <a href="'.$base_url.'/startup/'.$encoded.'"><img src="'.$logoUrl.'" /></a>
+                                            </span>
+                                             <h6><a href="'.$base_url.'/startup/'.$encoded.'">'.$startupdata->CompanyName.'</a></h6>
+                                             <h6>Founder</h6>
+                                            <label>'.$startupdata->HighLevelPitch.'</label>
+                                        </div>
+                                    </div>
+                                </div>';
+                }
+               
+            }
+           // echo $i; //die();
+            if($i%2 == 1){
+              //  echo 'yes';
+                $html .= '</div>';
+            }
+         }
 
 
-function startup_company_form()
-{
-	global $user,$base_url,$theme_path;
-	$form['compantinformation'] = array(
-		'#type' => 'item',
-		'#markup' => "<h4 style='margin-bottom:20px;'>".COMPANYINFOTEXT."</h4>",
-		'#prefix'=>'<div class="c-forminner">',
-    );
-	$form['companyname'] = array(
-		'#type' => 'textfield',
-		'#title' => t(COMPANYNAME),
-		'#maxlength' => 50,
-		'#attributes' => array('class'=> array('companyname')),
-		'#required' => TRUE,
-		'#size' => 50,
-	);
-	$form['logo'] = array(
-		'#type' => 'file',
-		'#title' => t(COMPANYLOGO),
-		'#attributes' => array('class'=> array('companylogo')),
-	);	
-	$form['highconceptpitch'] = array(
-		'#type' => 'textfield',
-		'#title' => t(HIGHCONCEPTPITCH),
-		'#attributes' => array('class'=> array('highconceptpitch')),
-		'#size' => 50,
-	);
-	$form['companywebsite'] = array(
-		'#type' => 'textfield',
-		'#title' => t(COMPANYWEBSITE),
-		'#attributes' => array('class'=> array('companywebsite')),
-		'#size' => 50,
-	);	
-	$form['product'] = array(
-		'#type' => 'textarea',
-		'#title' => t(PRODUCT),
-		'#attributes' => array('class'=> array('producttextarea')),
-	);
-	$form['divider1'] = array(
-		'#type' => 'item',
-		'#markup' => '<hr>',
-	);
-	$form['location'] = array(
-		'#type' => 'textfield',
-		'#title' => t(LOCATION),
-		'#attributes' => array('class'=> array('location')),
-		'#size' => 50,
-	);
-	$form['markets'] = array(
-		'#type' => 'textfield',
-		'#title' => t(MARKETS),
-		'#attributes' => array('class'=> array('markets')),
-		'#size' => 50,
-		'#suffix'=>'</div>',
-	);	
-	$form['whyareyouhere'] = array(
-		'#type' => 'item',
-		'#markup' => "<h4 style='margin-bottom:20px;'>".WHYAREYOUHERE."</h4>",
-		'#prefix'=>'<div class="c-forminner padd">',
-    );
-	$form['fundraising'] = array(
-		'#type' => 'checkbox',
-		'#title' => t(FUNDRAISING),
-		'#attributes' => array('class'=> array('fundraising')),
-	);
-	$form['fundraisingdescription'] = array(
-		'#type' => 'item',
-		'#markup' => "<p style='margin-bottom:20px;'>".FUNDRAISINGDESCRIPTION."</p>",
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+                            
+                            $html .= '</div>';
+                           
+                            $html .= '<!-- bototm grey-->
+                            <div class="block2-outer bottom-grey">
+                                <ul>
+                                    <li><h6>Founder</h6> Yaksha venture</li>
+                                    <li><h6>Employee</h6> Yaksha venture</li>                                    
+                                </ul>
+                            </div>
+                            <!-- Reference section starts here -->
+                            <h3>References</h3>
+                            <div class="block2-outer references">';
+                              if($uid == 0){
+                                $html .= '<div class="alt-ex">
+                                    <a class="button" href="">Login</a> OR <a class="button" href="">Signup</a> 
+                                </div>to leave a reference for Chris William  </div>';
+                              }  
+
+                      
+                        $html .= '</div>
+
+                        <!-- right sidebar panel-->
+                        <div class="right-panel">
+
+                            <!-- Vitals promo part -->
+                            <h4>Vitals</h4>
+                            <div class="block2-outer bottom-grey">
+                                <ul>
+                                    <li><h6>Location</h6> <label>Mexico</label></li>
+                                    <li><h6>Role</h6><label>Visualizer</label> </li>
+                                    
+                                </ul>
+                            </div>
+                            
+                            <!-- Your connection to William section starts here -->
+                            <h3>Your connection to William</h3>
+                            <div class="block2-outer references">';
+                               if($uid == 0){
+                                    $html .= '<div class="alt-ex">
+                                    <a class="button" href="">Login</a> OR <a class="button" href="">Signup</a> 
+                                </div>to leave a reference for Chris William';
+                               }
+                                
+
+                            
+                            $html .= '</div><!-- Vitals starts here -->
+                            <h3>Vitals</h3>
+                            <div class="block2-outer bottom-grey">
+                                <ul>
+                                    <li><h6>Location</h6> <label>San Diego, Sillicon valley, United States</label></li>
+                                    <li><h6>Role</h6> <label>Hardware Industry, Media, Software Development</label></li>
+                                    
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>';
+		return $html;
+	}
+	/*
+	 **** Returns custom content to Drupal
+	*/
+	function custom_startup_company_dashboard(){
+		global $base_url,$user;
+		$template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
+		$arg = arg(1);
+		$decoded = base64_decode( urldecode( $arg ) );
+		$exploadurl = explode('-',$decoded);
+		$id = $exploadurl[0];
+		$result = db_select('chuang_startup', 's')
+			->fields('s')
+			->condition('Id', $id)
+			->execute()
+			->fetch();
+		$logo = $result->Logo;
+        $founderId = $result->created_by;
+        $profile_data = drupal_custom_profile_data($founderId);
+        $profileImage = $profile_data->profile_image;
+        $name = $profile_data->name;
+        $miniresume = $profile_data->mini_resume;
+        if(!empty($profileImage)){
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+        }
+        else{
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
+        }
+        $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
+       // echo '<pre>'; print_r($result); die();
+		if(!empty($logo)){
+			$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$logo;
+		}
+		else{
+			$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
+		}
+		$productimage = $base_url.'/'. path_to_theme().'/images/companylogo/'.$result->productimage;
+
+	  	$html = '<!-- top promo section -->
+                    <div class="promo" >
+                        <div class="top-section1">
+                            <div class="left1">
+                                <span>
+                                    <img src="'.$logoUrl.'" />
+                                </span>
+                                <h2>'.$result->CompanyName.'</h2>
+                                <h6>'.$result->HighLevelPitch.'</h6>';
+                                if(!empty($result->Location)){
+                                	$html .= '<label> '.$result->Location.' | Online Dating | Consumer Internet | Social Search | Android </label>';
+                                }
+                                else{
+                                	$html .= '<label> Online Dating | Consumer Internet | Social Search | Android </label>';
+                                }
+                                
+                              
+                         $html .= '</div>
+                            <div class="right1">';
+                                if($user->uid != 0){
+                                    $result = db_select('chuang_follow', 's')
+                                        ->fields('s')
+                                        ->condition('from_id', $user->uid)
+                                        ->condition('to_id', $id)
+                                        ->condition('to_type', 2)
+                                        ->execute()
+                                        ->fetch();
+                                    if(!empty($result)){
+                                        $output = '';
+                                        $output .= drupal_render(drupal_get_form('followes_unfollow_company_form',$id));
+                                        $html .= '<div class="follow">'.$output.'</div>';     
+                                    }
+                                    else{
+                                        $output = '';
+                                        $output .= drupal_render(drupal_get_form('followes_follow_company_form',$id));
+                                        $html .= '<div class="follow">'.$output.'</div>';
+                                    }
+                                }
+                                else{
+                                   $html .= '<div class="notfollow"><a href="javascript:void(0);" class="button anonymousfollow">Follow</a></div>'; 
+                                }
+                                  
+                               
+
+
+                            $html .= '<a href="#" class="button">Share</a>';
+                            $countfollowers = get_company_followers_count($id);
+                                if($countfollowers != 0){
+                                    $html .= '<span class="follow-count">'.$countfollowers.' Followers</span>';
+                                }
+                                else{
+                                    $html .= '<span class="follow-count">No Followers</span>';
+                                } 
+                                 $followeresultcount = db_select('chuang_follow', 's')
+                                    ->fields('s')
+                                    ->condition('to_id', $id)
+                                    ->execute()
+                                    ->fetchAll();
+                                    if(count($followeresultcount) > 0){
+                                        $count = count($followeresultcount);
+                                    }
+                            $html .= '</div>
+                        </div>
+                        <div class="bottom-section1">
+                            <ul>
+                                <li><a href="#">Overview</a></li>
+                                <li><a href="#">Events</a></li>
+                                <li><a href="'.$base_url.'/startup/'.$arg.'/followers">Followers<span class="countfollower">'.$count.'</span></a></li>
+
+                            </ul>
+                            <ul class="social-outer">
+                                <li><a href="#" class="fb1"></a></li>
+                                <li><a href="#" class="tw1"></a></li>
+                                <li><a href="#" class="in1"></a></li>
+                                <li><a href="#" class="gp"></a></li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+
+                    <div class="news-section-container ">
+                        <div class="news-section ">
+                            <!-- products section starts here -->
+                            <h3>Products</h3>
+                            <div class="block2-outer product">';
+                            if(!empty($productimage)){
+                            	$html .= '<div class="product-image"> <img src="'.$productimage.'" /></div>';
+                            }  
+                            $allTeamMembers = drupal_custom_company_users($id);  
+                          // echo '<pre>'; print_r($allTeamMembers); die();
+						$html .= '<div class="inner-content">'.$result->Product.'</div>
+                            </div>
+
+                            <!-- Founders section starts here -->
+                            <h3>Members</h3>
+                            <div class="block2-outer founder">';
+                        
+            if(count($allTeamMembers) > 0) {
+            $i =0;
+            $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
+            foreach($allTeamMembers as $val){
+                 $i++;     
+                $profile_data = drupal_custom_profile_data($val->user_id);
+                 $profileImage = $profile_data->profile_image;
+                $name = $profile_data->name;
+              
+                if(!empty($profileImage)){
+                    $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+                }
+                else{
+                    $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
+                }
+             
+                if($i%2 == 1){
+                    $html .=  '<div class="row">
+                                    <div class="col-sm-6 col-xs-12">
+                                        <div class="card-inner">
+                                            <span class="user">
+                                               <a href="'.$base_url.'/profile/'.$val->user_id.'"><img src="'.$profileImage.'" /></a>
+                                            </span>
+                                             <h6><a href="'.$base_url.'/profile/'.$val->user_id.'">'.$name.'</a></h6>
+                                             <h6>Founder</h6>
+                                            <label>'.$startupdata->HighLevelPitch.'</label>
+                                        </div>
+                                    </div>';
+                             
+                }
+                else{
+                    $html .= '<div class="col-sm-6 col-xs-12">
+                                        <div class="card-inner">
+                                             <span class="user">
+                                               <a href="'.$base_url.'/profile/'.$val->user_id.'"><img src="'.$profileImage.'" /></a>
+                                            </span>
+                                             <h6><a href="'.$base_url.'/profile/'.$val->user_id.'">'.$name.'</a></h6>
+                                             <h6>Founder</h6>
+                                            <label>'.$startupdata->HighLevelPitch.'</label>
+                                        </div>
+                                    </div>
+                                </div>';
+                }
+               
+            }
+           // echo $i; //die();
+            if($i%2 == 1){
+              //  echo 'yes';
+                $html .= '</div>';
+            }
+         }
+
+
+                               /* $html .= '<div class="row">
+                                    <!-- founder card -->
+                                    <div class="col-sm-6 col-xs-12">
+                                        <div class="card-inner">
+                                            <span>
+                                              <a href="'.$base_url.'/profile/'.$founderId.'"><img src="'.$profileImage.'" /></a>
+                                            </span>
+                                            <h6><a href="'.$base_url.'/profile/'.$founderId.'">'.$name.'</a></h6>
+                                            <h6>CEO</h6>
+                                            <label>CEO of @Hinge. MBA, @HBS. BA, @Colgate in Econ/Game Theory. Web/software development and management consulting experience.</label>
+                                        </div>
+                                    </div>                                    
+                                                                        
+                                     <!-- founder card -->
+                                    
+                                </div>';*/
+
+                             $html .= ' </div>
+                            
+                                <!-- Team section starts here -->
+                            
+                        
+                      
+                        
+                        <!-- right sidebar panel-->
+                        <div class="right-panel">
+                            
+                            <!-- blue promo part -->
+                            <div class="bg-l-blue blue-promo">
+                                To find out whether '.$result->CompanyName.' is fundraising, apply for investor status.
+                                <div class="clearfix">
+                                       <a href="" class="button">Apply to Invest</a>
+                                </div>
+                             
+                            </div>
+                            		 <div class="list-group discussion-group update">
+                                <h4 class="list-group-item title blue-bg">
+                                    Updates
+                                </h4>
+                                <a href="#" class="list-group-item">
+                                    <ul>
+                                        <li><img src="'.$template_path.'/images/img-s1.jpg" alt=""/></li>
+                                        <li>Musicyou Raises A Seed Round For Its Private Music Sharing Platform</li>
+                                    </ul>
+                                </a>
+                                <a href="#" class="list-group-item">
+                                    <ul>
+                                        <li><img src="'.$template_path.'/images/img-s1.jpg" alt=""/></li>
+                                        <li>Musicyou Raises A Seed Round For Its Private Music Sharing Platform</li>
+                                    </ul>
+                                </a>
+                                <a href="#" class="list-group-item">
+                                    <ul>
+                                        <li><img src="'.$template_path.'/images/img-s1.jpg" alt=""/></li>
+                                        <li>Musicyou Raises A Seed Round For Its Private Music Sharing Platform</li>
+                                    </ul>
+                                </a>
+                                <a href="#" class="list-group-item">
+                                    <ul>
+                                        <li><img src="'.$template_path.'/images/img-s1.jpg" alt=""/></li>
+                                        <li>Musicyou Raises A Seed Round For Its Private Music Sharing Platform</li>
+                                    </ul>
+                                </a>
+                                 <a href="#" class="list-group-item">
+                                    <ul>
+                                        <li><img src="'.$template_path.'/images/img-s1.jpg" alt=""/></li>
+                                        <li>Musicyou Raises A Seed Round For Its Private Music Sharing Platform</li>
+                                    </ul>
+                                </a>
+                            </div>
+                        </div>
+                        
+                    </div>';
+            return $html;
+	} 
+	function custom_startup_trending_page(){
+		$ListingData = custom_startup_trending_list_page();
+		$finalHtml = '<div class="news-section-container trending">
+							<div class="trending-content">
+								<!-- right content part -->
+								<div class="content-part">
+									<!-- top tabs bar -->
+									<div class=" tab-outer">
+										<div class="tabs-holder">
+											<a class="button  btn-default active" href="#">Trending</a>
+											<a class="button btn-default " href="#">Done Deals</a>
+											<a class="button  btn-default" href="#">Browse Deals</a>
+										</div>
+
+
+									</div>
+									<div class="filter-outer">
+										<ul class="c-time">
+											<li class="active"><a class="active" href="#">Weekly</a></li>
+											<li><a class="" href="#">Weekly</a></li>
+
+										</ul>
+										<a class="blue-bg button share-btn" href="">Share</a>
+									</div>
+
+									<!--content table starts here -->
+					'.$ListingData.'
+								</div>
+
+								<!-- left sidebar -->
+								<div class="left-part">
+									<div class="list-group sort-type">
+										<a class="list-group-item active" href="#">
+											By Popularity
+										</a>
+										<a class="list-group-item" href="#">By Customers</a>
+										<a class="list-group-item" href="#">Recently Published</a>
+									</div>
+								</div>
+
+							</div>
+						</div>';
+		return $finalHtml;
+	}
+	function custom_startup_trending_list_page() {
+		global $base_url;
+		$header = array(
+			array('data' => t('')),
+			array('data' => t('Company')),
+			array('data' => t('Applicant')),
+			array('data' => t('Follows')),
+		);
+		$rows = array();
+		$query = db_select('chuang_startup', 'd');
+		$query->fields('d', array('Id','CompanyName','HighLevelPitch','Logo'));
+		$numrows = $query->execute()->rowCount();
+		$result = $query->extend('PagerDefault')->limit(PAGER)->execute();
+		$rows = array();
+		$i == 0;
+		foreach ($result as $row) {
+			$i++;
+			$companyname = $row->CompanyName;
+			if(!empty($row->Logo)){
+				$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$row->Logo;
+			}
+			else{
+				$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
+			}
+			$id = $row->Id;
+			$encoded = urlencode( base64_encode( $id.'-'.$companyname ) );
+			//$convertedid = strtr(base64_encode($id), '+/=', '-_,');
+			global $base_url;
+			$highLevel = $row->HighLevelPitch;
+			$companyDetail = '<div class="compny-logo"><img width="150" height="120" alt="" src="'.$logoUrl.'"></div><div class="company-detail"><b><a href="'.$base_url.'/startup/'.$encoded.'">'.$companyname.'</a></b><label>'.$highLevel.'</label></div>';
+			$obj['srno'] = $i;
+			$obj['CompanyName'] = $companyDetail;
+			$obj['Applicant'] = '20';
+			$obj['Follows'] = '15';
+			$rows[] = array('data' => (array) $obj);
+		}
+		$html = '';
+		$html.= theme('table',
+				array(
+					'header' => $header,
+					"attributes" => array('class' => array('news-table trending')),
+					'rows'=>$rows,
+					'sticky' => FALSE,
+					'empty' => '<div style="text-align:center; font-size:11px; color:#ff0000;">No data available.</div>',
+					)
+				);
+		pager_default_initialize($numrows,PAGER, $element =0);
+		$html .= theme('pager',array('tags' => array(),'parameters' => array('cs' => '1')));
+		return ($html);	  
+	}
+
+	function startup_profile_company_form(){
+		$output = '';
+		$output .= '<div class="c-tabouter"><a href="#" class="startUpcompany active">'.COMPANYBUTTON.'</a><a href="#" class="startUpteam">'.TEAMBUTTON.'</a></div>';
+		$output .= @drupal_render(drupal_get_form('startup_company_form'));
+		return $output;
+	}
+
+	function custom_startup_user_profile(){
+		$output = '';
+		$output .= @drupal_render(drupal_get_form('custom_startup_team_form'));
+		return $output;
+	}
+	function custom_startup_profile_cover($form, &$form_state){
+		global $user,$base_url,$theme_path;
+		$form['profilecoverblock'] = array(
+			'#type' => 'item',
+			'#markup' => "<h4 style='margin-bottom:20px;'>".TEAMABOUT."</h4>",
+			'#prefix'=>'<div class="c-forminner"><div class="c-forminnerouter">',
+            '#suffix'=>'</div></div>',
+		);
+	}
+	function custom_startup_team_form($form, &$form_state, $no_js_use = FALSE) {
+		global $user,$base_url,$theme_path;
+		$username = $user->name;
+		$uid = $user->uid;
+		$profile_data = drupal_custom_profile_data($uid);
+		//$profileImage = $profile_data->profile_image;
+        $path = drupal_get_path('module', 'custom_startup');    
+        drupal_add_js($path.'/js/profile.js');
+		$name = $profile_data->name;
+		$miniresume = $profile_data->mini_resume;
+		if(!empty($profile_data->profile_image)){
+			$profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profile_data->profile_image;
+		}
+		else{
+			$profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
+		}
+		$form['name'] = array(
+			'#type' => 'textfield',
+			'#title' => t(FULLNAME),
+			'#maxlength' => 50,
+			'#attributes' => array('class'=> array('name')),
+			'#size' => 50,
+			'#default_value' => $name,
+		);
+		$form['username'] = array(
+			'#type' => 'textfield',
+			'#title' => t(USERNAME),
+			'#maxlength' => 50,
+			'#attributes' => array('class'=> array('username')),
+			'#size' => 50,
+			'#default_value' => $username,
+			'#disabled' => TRUE,
+		);
+		$form['profileimage'] = array(
+			'#type' => 'file',
+			'#title' => t(PROFILEIMAGE),
+			'#attributes' => array('class'=> array('profileimage')),
+		);
+		$form['miniresume'] = array(
+			'#type' => 'textarea',
+			'#title' => t(MINIRESUME),
+			'#attributes' => array('class'=> array('miniresume')),
+			'#default_value' => $miniresume,
+		);
+       $form['submit'] = array(
+			'#type' => 'submit',
+			'#default_value' => 'Save', 
+			'#attributes'=>array('style'=>'margin-bottom:10px;'),
+			'#prefix'=>'<div class="submit-outer">',
+		);
+        $form['cancel'] = array(
+            '#type' => 'button',
+            '#default_value' => 'Cancel', 
+            '#attributes'=>array('style'=>'margin-bottom:10px;'),           
+            '#suffix'=>'</div>',            
+        );
+        return $form;
+	}
+    function custom_startup_experience_form($form, &$form_state) {
+        global $user,$base_url,$theme_path;
+        $form['experince'] = array(
+            '#type' => 'textfield',
+            '#title' => t(COMPANYNAMEE),
+            '#maxlength' => 50,
+            '#attributes' => array('class'=> array('companyname')),
+            '#size' => 50,
+            '#autocomplete_path' => 'companylist/autocomplete',
+        );
+        $form['currentlyworking'] = array(
+            '#type' => 'checkbox',
+            '#title' => t(CURRENTWORKING),
+            '#attributes' => array('class'=> array('currently')),
+        );
+        $form['submit'] = array(
+            '#type' => 'submit',
+            '#default_value' => 'Save', 
+            '#attributes'=>array('style'=>'margin-bottom:10px;'),
+            '#attributes' => array('class'=> array('save-experince')),    
+            '#prefix'=>'<div class="submit-outer">',
+        );
+        $form['cancel'] = array(
+            '#type' => 'button',
+            '#default_value' => 'Cancel', 
+            '#attributes'=>array('style'=>'margin-bottom:10px;',), 
+            '#attributes' => array('class'=> array('cancel-experince')),          
+            '#suffix'=>'</div>',            
+        );
+        $form['boxx'] = array(
+            '#type' => 'markup',
+            '#prefix' => '<div id="box">',
+            '#suffix' => '</div>',
+            '#markup' => 'Please type the company name.',
+          );    
+        return $form;
+    }
+	function validate_callback($form, &$form_state){
+		$username = $form['username']['#value'];
+		$query = db_select('users','m')
+			->condition('name',$username,'=')
+			->condition('status',1,'=')
+			->fields ('m', array('uid',));
+		$results = $query->execute();
+		$data = $results->fetchAssoc();
+		if(!empty($data)){
+			//form_set_error('', t('Username is already taken. Please choose different username.'));
+			return 'Username is already taken. Please choose different username.';
+		}
+	}
+	function startup_company_form(){
+		global $user,$base_url,$theme_path;
+		$form['compantinformation'] = array(
+			'#type' => 'item',
+			'#markup' => "<h4 style='margin-bottom:20px;'>".COMPANYINFOTEXT."</h4>",
+			'#prefix'=>'<div class="c-forminner">',
+		);
+		$form['companyname'] = array(
+			'#type' => 'textfield',
+			'#title' => t(COMPANYNAME),
+			'#maxlength' => 50,
+			'#attributes' => array('class'=> array('companyname')),
+			'#required' => TRUE,
+			'#size' => 50,
+		);
+		$form['logo'] = array(
+			'#type' => 'file',
+			'#title' => t(COMPANYLOGO),
+			'#attributes' => array('class'=> array('companylogo')),
+		);
+		$form['highconceptpitch'] = array(
+			'#type' => 'textfield',
+			'#title' => t(HIGHCONCEPTPITCH),
+			'#attributes' => array('class'=> array('highconceptpitch')),
+			'#size' => 50,
+		);
+		$form['companywebsite'] = array(
+			'#type' => 'textfield',
+			'#title' => t(COMPANYWEBSITE),
+			'#attributes' => array('class'=> array('companywebsite')),
+			'#size' => 50,
+		);
+		$form['productimage'] = array(
+			'#type' => 'file',
+			'#title' => t(PRODUCTIMAGE),
+			'#attributes' => array('class'=> array('productimage')),
+		);	
+		$form['product'] = array(
+			'#type' => 'textarea',
+			'#title' => t(PRODUCT),
+			'#attributes' => array('class'=> array('producttextarea')),
+		);
+		$form['divider1'] = array(
+			'#type' => 'item',
+			'#markup' => '<hr>',
+		);
+		$form['location'] = array(
+			'#type' => 'textfield',
+			'#title' => t(LOCATION),
+			'#attributes' => array('class'=> array('location')),
+			'#size' => 50,
+		);
+		$form['markets'] = array(
+			'#type' => 'textfield',
+			'#title' => t(MARKETS),
+			'#attributes' => array('class'=> array('markets')),
+			'#size' => 50,
+			'#suffix'=>'</div>',
+		);	
+		$form['whyareyouhere'] = array(
+			'#type' => 'item',
+			'#markup' => "<h4 style='margin-bottom:20px;'>".WHYAREYOUHERE."</h4>",
+			'#prefix'=>'<div class="c-forminner padd">',
+		);
+		$form['fundraising'] = array(
+			'#type' => 'checkbox',
+			'#title' => t(FUNDRAISING),
+			'#attributes' => array('class'=> array('fundraising')),
+		);
+		$form['fundraisingdescription'] = array(
+			'#type' => 'item',
+			'#markup' => "<p style='margin-bottom:20px;'>".FUNDRAISINGDESCRIPTION."</p>",
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-		'#prefix'=>'<div class="c-forminner-inner hide fundraisingg"><div class="c-outer">',
-    );
-	$form['raising'] = array(
-		'#type' => 'textfield',
-		'#title' => t(RAISING),
-		'#attributes' => array('class'=> array('raising')),
-		'#size' => 50,
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+			'#prefix'=>'<div class="c-forminner-inner hide fundraisingg"><div class="c-outer">',
+		);
+		$form['raising'] = array(
+			'#type' => 'textfield',
+			'#title' => t(RAISING),
+			'#attributes' => array('class'=> array('raising')),
+			'#size' => 50,
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-	);
-	$form['debtequitysafe'] = array(
-		'#type' => 'textfield',
-		'#title' => t(DEBTEQUITYSAFE),
-		'#attributes' => array('class'=> array('debtequitysafe')),
-		'#size' => 50,
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+		);
+		$form['debtequitysafe'] = array(
+			'#type' => 'textfield',
+			'#title' => t(DEBTEQUITYSAFE),
+			'#attributes' => array('class'=> array('debtequitysafe')),
+			'#size' => 50,
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-	);
-	$form['debtequitysafe'] = array(
-		'#type' => 'select',
-		'#title' => t(DEBTEQUITYSAFE),
-		'#options' => array(t(SELECT), t(EQUITY), t(CONVERTIBLEDEBT), t(SAFE)),
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+		);
+		$form['debtequitysafe'] = array(
+			'#type' => 'select',
+			'#title' => t(DEBTEQUITYSAFE),
+			'#options' => array(t(SELECT), t(EQUITY), t(CONVERTIBLEDEBT), t(SAFE)),
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-	);
-	$form['premoneyvaluation'] = array(
-		'#type' => 'textfield',
-		'#title' => t(PREMONEYVALUATION),
-		'#attributes' => array('class'=> array('premoneyvaluation')),
-		'#size' => 50,
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+		);
+		$form['premoneyvaluation'] = array(
+			'#type' => 'textfield',
+			'#title' => t(PREMONEYVALUATION),
+			'#attributes' => array('class'=> array('premoneyvaluation')),
+			'#size' => 50,
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-	);
-	$form['browsevaluations'] = array(
-		'#type' => 'item',
-		'#markup' => "<p style='margin-bottom:20px;'>".BROWSEVALUATIONS."</p>",
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+		);
+		$form['browsevaluations'] = array(
+			'#type' => 'item',
+			'#markup' => "<p style='margin-bottom:20px;'>".BROWSEVALUATIONS."</p>",
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-    );
-	$form['previousfunding'] = array(
-		'#type' => 'textfield',
-		'#title' => t(PREVIOUSFUNDING),
-		'#attributes' => array('class'=> array('previousfunding')),
-		'#size' => 50,
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+		);
+		$form['previousfunding'] = array(
+			'#type' => 'textfield',
+			'#title' => t(PREVIOUSFUNDING),
+			'#attributes' => array('class'=> array('previousfunding')),
+			'#size' => 50,
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-	);
-	
-	$form['terms'] = array(
-		'#type' => 'item',
-		'#markup' => "<p style='margin-bottom:20px;'><b>".COMPANYTERMS." </b>".COMPANYTERMSSOMEREMINDER."
-		<ul>
-			<li>".COMPANYTERMSFIRSTTEXT."</li>
-			<li>".COMPANYTERMSSECONDTEXT."</li>
-			<li>".COMPANYTERMSTHIRDTEXT."</li></ul></p>",
-		'#states' => array(
-			'visible' => array(
-				':input[name="fundraising"]' => array('checked' => TRUE),
+		);
+		
+		$form['terms'] = array(
+			'#type' => 'item',
+			'#markup' => "<p style='margin-bottom:20px;'><b>".COMPANYTERMS." </b>".COMPANYTERMSSOMEREMINDER."
+			<ul>
+				<li>".COMPANYTERMSFIRSTTEXT."</li>
+				<li>".COMPANYTERMSSECONDTEXT."</li>
+				<li>".COMPANYTERMSTHIRDTEXT."</li></ul></p>",
+			'#states' => array(
+				'visible' => array(
+					':input[name="fundraising"]' => array('checked' => TRUE),
+				),
 			),
-		),
-	'#suffix'=>'</div></div>',	
-    );
-	$form['recruiting'] = array(
-		'#type' => 'checkbox',
-		'#title' => t(COMPANYRECRUITING),
-		'#attributes' => array('class'=> array('recruiting')),
-	);
-	$form['recruitingdescription'] = array(
-		'#type' => 'item',
-		'#markup' => "<p style='margin-bottom:20px;'>".COMPANYRECRUITINGDESCRIPTION."</p>",
-    );
-	$form['applyingtoanincubator'] = array(
-		'#type' => 'checkbox',
-		'#title' => t(APPLYINGINCUBATOR),
-		'#attributes' => array('class'=> array('applyingtoanincubator')),
-	);
-	$form['incubatordescription'] = array(
-		'#type' => 'item',
-		'#markup' => "<p style='margin-bottom:20px;'>".APPLYINGINCUBATORDESCRIPTION."</p>",
-		'#suffix'=>'</div>',
-    );
-	
-	$form['termsofservicedescription'] = array(
-		'#type' => 'item',
-		'#markup' => "<h4 style='margin-bottom:20px;'>".TERMSOFSERVICEDESCRIPTION."</h4>",
-		'#prefix'=>'<div class="c-forminner">',
-    );
-	$form['termsofservice'] = array(
-		'#type' => 'checkbox',
-		'#title' => t(COMPANYTERMSOFSERVICE),
-		'#attributes' => array('class'=> array('termsofservice')),
-		'#required' => TRUE,
-		'#suffix'=>'</div>',
-	);
-	$form['submit'] = array(
-		'#type' => 'submit',
-		'#default_value' => COMPANYSUBMITBUTTON, 
-		'#attributes'=>array('style'=>'margin-bottom:10px;'),
-                '#prefix'=>'<div class="submit-outer">',
-                '#suffix'=>'</div>',
-	);
-	return $form;
-	
-}
-
-/**************Company Profile Submit*****************/
-
-function startup_company_form_submit($form, &$form_state)
-{
+		'#suffix'=>'</div></div>',	
+		);
+		$form['recruiting'] = array(
+			'#type' => 'checkbox',
+			'#title' => t(COMPANYRECRUITING),
+			'#attributes' => array('class'=> array('recruiting')),
+		);
+		$form['recruitingdescription'] = array(
+			'#type' => 'item',
+			'#markup' => "<p style='margin-bottom:20px;'>".COMPANYRECRUITINGDESCRIPTION."</p>",
+		);
+		$form['applyingtoanincubator'] = array(
+			'#type' => 'checkbox',
+			'#title' => t(APPLYINGINCUBATOR),
+			'#attributes' => array('class'=> array('applyingtoanincubator')),
+		);
+		$form['incubatordescription'] = array(
+			'#type' => 'item',
+			'#markup' => "<p style='margin-bottom:20px;'>".APPLYINGINCUBATORDESCRIPTION."</p>",
+			'#suffix'=>'</div>',
+		);
+		
+		$form['termsofservicedescription'] = array(
+			'#type' => 'item',
+			'#markup' => "<h4 style='margin-bottom:20px;'>".TERMSOFSERVICEDESCRIPTION."</h4>",
+			'#prefix'=>'<div class="c-forminner">',
+		);
+		$form['termsofservice'] = array(
+			'#type' => 'checkbox',
+			'#title' => t(COMPANYTERMSOFSERVICE),
+			'#attributes' => array('class'=> array('termsofservice')),
+			'#required' => TRUE,
+			'#suffix'=>'</div>',
+		);
+		$form['submit'] = array(
+			'#type' => 'submit',
+			'#default_value' => COMPANYSUBMITBUTTON, 
+			'#attributes'=>array('style'=>'margin-bottom:10px;'),
+					'#prefix'=>'<div class="submit-outer">',
+					'#suffix'=>'</div>',
+		);
+		return $form;		
+	}
+	/**************Company Profile Submit*****************/
+	function startup_company_form_submit($form, &$form_state){
 		//echo '<pre>'; print_r($_POST); exit;
 		global $user;
 		$path=$_FILES["files"]["tmp_name"]['logo'];
+		$productpath=$_FILES["files"]["tmp_name"]['productimage'];
 		$image_name=$_FILES["files"]["name"]['logo'];
+		$product_image_name=$_FILES["files"]["name"]['productimage'];
 		$filename = stripslashes($_FILES['files']['name']['logo']);
+		$product_filename = stripslashes($_FILES['files']['name']['productimage']);
 		$folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companylogo/';
+		$productfolderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companyproduct/';
+		if(!empty($filename)): 
+			$extension = getExtension($filename);  // get file name
+			$extension = strtolower($extension);	// get extension
+			$productextension = getExtension($product_filename);  // get file name
+			$productextension = strtolower($productextension);	// get extension
+			if($extension!= JPG and $extension!= JPEG and $extension!= GIF and $extension!= PNG ):
+				form_set_error('file', t(FILEEXTENSION));
+			else:
+				$id = insertCompanyProfileData($form_state['values']);
+				$randNum = RandomString(6);
+				$filename =  'BA_'.$randNum.'_'.$id.'.'.$extension;  // filename
+				$productfilename =  'CA_'.$randNum.'_'.$id.'.'.$productextension;  // filename
+				if(file_exists($folderPath.$filename)):
+					unlink($folderPath.$filename); 
+				endif; 
+				if(file_exists($folderPath.$productfilename)):
+					unlink($companyfolderPath.$productfilename); 
+				endif;
+                move_uploaded_file($path,$folderPath.$filename);		 
+				move_uploaded_file($productpath,$folderPath.$productfilename);
+			endif; 
+
+			updateLogoName($filename,$id,$productfilename);			
+			drupal_set_message(COMPANYPROFILESUCCESSMESSAGE);
+			drupal_goto('company');
+		endif;
+	}
+/***************Login form changes*******************/
+
+	function custom_startup_preprocess_page(&$vars) {
+		global $user , $base_url;
+		$imgpath = $base_url.'/sites/all/themes/chuang/images/we-bar.png';
+		
+	    if ($user->uid == 0) {
+			$vars['loginpopup'] = "<div class='dropdown-menu  row' role='menu'><div class='col-sm-6 col-xs-12 field-part'>";
+			$vars['loginpopup'] .= "<div id='login-pop'>" ;
+			$vars['loginpopup'] .= render($page['sidebar_first']);
+			$vars['loginpopup'] .= "</div></div>";
+			$vars['loginpopup'] .= "<div class='col-sm-6 col-xs-12 we-chat-part'><div class='c-head'>Use your <b>WeChat</b> account for signup <i class='fa fa-weixin'></i>";
+			$vars['loginpopup'] .= "</div><img class='we-code' src=".$imgpath." alt=''/><label>Scan this QR Code for login</label>";
+			$vars['loginpopup'] .= "</div>";
+			$vars['loginpopup'] .= "</div>";
+		}
+	  
+		if ($user->uid == 0) {
+			$vars['registerpopup'] = "<div class='dropdown-menu  row' role='menu'><div class='col-sm-6 col-xs-12 field-part'>";
+			$vars['registerpopup'] .= "<div id='login-pop'>" ;
+			$vars['registerpopup'] .= drupal_render(drupal_get_form('user_register_form'));
+			$vars['registerpopup'] .= "</div></div>";
+			$vars['registerpopup'] .= "<div class='col-sm-6 col-xs-12 we-chat-part'><div class='c-head'>Use your <b>WeChat</b> account for signup <i class='fa fa-weixin'></i>";
+			$vars['registerpopup'] .= "</div><img class='we-code' src=".$imgpath." alt=''/><label>Scan this QR Code for login</label>";
+			$vars['registerpopup'] .= "</div>";
+			$vars['registerpopup'] .= "</div>"; 
+		}
+	  
+	}
+	function custom_startup_form_comment_form_alter(&$form, &$form_state) {
+		global $base_url;
+		//echo '<pre>'; print_r($form); die();
+		$template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
+		$form['author']['#access'] = FALSE;
+		$form['actions']['submit']['#value'] = 'Comment';
+		//echo '<pre>'; print_r($form); die();
+		$form['comment_body']['commentimage'] = array(
+			'#type' => 'item',
+			'#weight' => -10,
+			'#markup' => '<img src="'.$template_path.'/images/user_default.jpg" />',
+			'#attributes' => array('class'=> array('commentimageouter')),
+			);
+		global $user;
+		if($user->uid == 0){
+			unset($form['actions']);
+			$form['actions']['button1'] = array(
+				'#type' => 'item',
+				'#markup' => '<a href="#" class="comment-login">Comment</a>',
+			);
+		}	
+		else{
+			
+		}
+	}
+	function custom_startup_form_alter(&$form, &$form_state, $form_id){
+		
+	}
+	function custom_startup_profile_update(&$form, &$form_state){
+		$username = $form['username']['#value'];
+		$query = db_select('users','m')
+			->condition('name',$username,'=')
+			->condition('status',1,'=')
+			->fields('m', array('uid',));
+		$results = $query->execute();
+		$data = $results->fetchAssoc();
+		$userid = $data['uid'];
+        $form_state['rebuild'] = TRUE; 
+		global $user;
+		if(!empty($data)){
+			if($user->uid != $userid){
+				return 'Username is already taken. Please choose different username.';
+			}
+			else{
+			                             
+			}	
+		}				
+		else{
+			
+		}
+	}
+	function custom_startup_profile_data_update($data,$FILES){
+		global $user;
+		$id = $user->uid;
+		$path=$_FILES["files"]["tmp_name"]['profileimage'];
+		$image_name=$_FILES["files"]["name"]['profileimage'];
+		$filename = stripslashes($_FILES['files']['name']['profileimage']);
+		$folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/profilephoto/';
 		if(!empty($filename)): 
 			$extension = getExtension($filename);  // get file name
 			$extension = strtolower($extension);	// get extension
 			if($extension!= JPG and $extension!= JPEG and $extension!= GIF and $extension!= PNG):
 				form_set_error('file', t(FILEEXTENSION));
 			else:
-				$id = insertCompanyProfileData($form_state['values']);
 				$randNum = RandomString(6);
-				$filename =  'BA_'.$randNum.'_'.$id.'.'.$extension;  // filename
+				$filename =  'PP_'.$randNum.'_'.$id.'.'.$extension;  // filename
 				if(file_exists($folderPath.$filename)):
 					unlink($folderPath.$filename); 
 				endif; 
 				move_uploaded_file($path,$folderPath.$filename);		 
 			endif; 
-			updateLogoName($filename,$id);			
-			drupal_set_message(COMPANYPROFILESUCCESSMESSAGE);
-			drupal_goto('company');
+			updateProfileImage($filename,$id);	
 		endif;
-}
+		$date = date("Y-m-d H:i:s");
+		db_update('chuang_user')->fields(array(
+				'name' => $data['name'],
+				'username' => $data['username'],
+				'modified_date'=> $date,
+				'modified_by'=> $user->uid,
+				'mini_resume'=> $data['miniresume'],
+				'modified_ip'=> $_SERVER['REMOTE_ADDR'],
+				))
+				->condition('drupal_user_id', $user->uid)
+				->execute();
+		$form_state['rebuild'] = TRUE;
+        
+	}	
+	
+	
 
 
 
 
-/***************Login form changes*******************/
 
-function custom_startup_preprocess_page(&$vars) {
-  global $user , $base_url;
-  $imgpath = $base_url.'/sites/all/themes/chuang/images/we-bar.png';
-    
-  if ($user->uid == 0) {
-    $vars['loginpopup'] = "<div class='dropdown-menu  row' role='menu'><div class='col-sm-6 col-xs-12 field-part'>";
-    $vars['loginpopup'] .= "<div id='login-pop'>" ;
-    $vars['loginpopup'] .= drupal_render(drupal_get_form('user_login'));
-    $vars['loginpopup'] .= "</div></div>";
-    $vars['loginpopup'] .= "<div class='col-sm-6 col-xs-12 we-chat-part'><div class='c-head'>Use your <b>WeChat</b> account for signup <i class='fa fa-weixin'></i>";
-    $vars['loginpopup'] .= "</div><img class='we-code' src=".$imgpath." alt=''/><label>Scan this QR Code for login</label>";
-    $vars['loginpopup'] .= "</div>";
-    $vars['loginpopup'] .= "</div>";
-  }
-  
-    if ($user->uid == 0) {
-    $vars['registerpopup'] = "<div class='dropdown-menu  row' role='menu'><div class='col-sm-6 col-xs-12 field-part'>";
-    $vars['registerpopup'] .= "<div id='login-pop'>" ;
-    $vars['registerpopup'] .= drupal_render(drupal_get_form('user_register_form'));
-    $vars['registerpopup'] .= "</div></div>";
-    $vars['registerpopup'] .= "<div class='col-sm-6 col-xs-12 we-chat-part'><div class='c-head'>Use your <b>WeChat</b> account for signup <i class='fa fa-weixin'></i>";
-    $vars['registerpopup'] .= "</div><img class='we-code' src=".$imgpath." alt=''/><label>Scan this QR Code for login</label>";
-    $vars['registerpopup'] .= "</div>";
-    $vars['registerpopup'] .= "</div>"; 
-  }
-  
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

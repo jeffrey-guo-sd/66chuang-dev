@@ -9,6 +9,7 @@ define('TEAMBUTTON','Team');
 define('COMPANYINFOTEXT','Company Info');
 define('COMPANYNAME','Company Name');
 define('COMPANYLOGO','Logo');
+define('PRODUCTIMAGE','Product Image');
 define('HIGHCONCEPTPITCH','High-Concept Pitch');
 define('COMPANYWEBSITE','Company Website');
 define('PRODUCT','Product');
@@ -44,8 +45,17 @@ define('JPEG','jpeg');
 define('GIF','gif');
 define('PNG','png');
 define('COMPANYPROFILESUCCESSMESSAGE','Company profile has been created successfully.');
-
-
+define('PAGER','10');
+define('STARTUPS','Startups');
+define('STARTUPSDESCRIPTION','Show a page with a long list across multiple pages');
+define('TEAM','About You');
+define('TEAMABOUT','Basic');
+define('PROFILEIMAGE','Photo');
+define('FULLNAME','Name');
+define('USERNAME','Username');
+define('MINIRESUME','Mini-resume');
+define('COMPANYNAMEE','Company Name');
+define('CURRENTWORKING','I currently work here');
 
 
 

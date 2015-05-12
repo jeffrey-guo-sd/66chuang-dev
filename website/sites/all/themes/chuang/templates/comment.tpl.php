@@ -57,15 +57,35 @@
  * @see theme_comment()
  */
 ?>
+<?php
+global $base_url;
+$uid = $comment->uid; 
+$result = db_select('chuang_user', 's')
+      ->fields('s')
+      ->condition('drupal_user_id', $uid)
+      ->execute()
+      ->fetch();
+    $name = $result->name;
+    if(!empty($result->profile_image)){
+      $ProfileimageUrl = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$result->profile_image;
+    }
+    else{
+      $ProfileimageUrl = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
+    } 
+?>
 <div class="<?php print $classes; ?> clearfix"<?php print $attributes; ?>>
 
   <div class="attribution">
-
-    <?php print $picture; ?>
+    <div class="user-picture">
+    <a title="user profile" href="<?php echo $base_url.'/profile/'.$uid; ?>"><img title="picture" alt="picture" src="<?php echo $ProfileimageUrl; ?>"></a></div>
+    <?php //print $picture; ?>
 
     <div class="submitted">
       <p class="commenter-name">
-        <?php print $author; ?>
+        <?php //print $author; ?>
+            <span rel="sioc:has_creator">
+<span class="username"> <a title="View user profile." href="<?php echo $base_url.'/profile/'.$uid; ?>"><?php echo $name; ?></a></span>
+</span>
       </p>
       <p class="comment-time">
         <?php print $created; ?>

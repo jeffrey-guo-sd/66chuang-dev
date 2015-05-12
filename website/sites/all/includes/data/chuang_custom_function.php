@@ -1,18 +1,20 @@
 <?php  
 include_once('chuang_constant.php');
+include_once('login_data.php');
 
 /***************Insert Company Profile Data****************/
 
 
 function insertCompanyProfileData($data)
 {
+	//echo '<pre>'; print_r($data); die();
 	global $user;
 	$date = date("Y-m-d H:i:s");
-	$id = db_insert('startup')->fields(array(
+	$id = db_insert('chuang_startup')->fields(array(
 	'CompanyName' => addslashes($data['companyname']),
 	'HighLevelPitch' => $data['highconceptpitch'],
 	'WebSite'=> addslashes($data['companywebsite']),
-	'Product'=> addslashes($data['product']['value']),
+	'Product'=> addslashes($data['product']),
 	'Location'=> addslashes($data['location']),
 	'Markets'=> addslashes($data['markets']),
 	'IsRecruiting'=> addslashes($data['recruiting']),
@@ -25,22 +27,46 @@ function insertCompanyProfileData($data)
 	'created_ip'=> $_SERVER['REMOTE_ADDR'],
 	'modified_ip'=> $_SERVER['REMOTE_ADDR'],
 	))->execute();
+	$startup_id = db_insert('chuang_user_startup')->fields(array(
+		'user_id' => $user->uid,
+		'startup_id' => $id,
+	))->execute();
 	return $id;
 }
 
-
-function updateLogoName($filename,$dataId)
+function insertUserProfileData($data)
+{
+	//echo '<pre>'; print_r($data); die();
+	$date = date("Y-m-d H:i:s");
+	$id = db_insert('chuang_user')->fields(array(
+			'name' => $data['name'],
+			'username' => $data['username'],
+			'drupal_user_id'=> $data['uid'],
+			'created_date'=> $date,
+			'modified_date'=> $date,
+			'created_by'=> $data['uid'],
+			'modified_by'=> $data['uid'],
+			'created_ip'=> $_SERVER['REMOTE_ADDR'],
+			'modified_ip'=> $_SERVER['REMOTE_ADDR'],
+			))->execute();
+	return $id;
+}
+function updateLogoName($filename,$dataId,$productfilename)
 {
 	global $user;
-	$num_updated = db_update('startup')->fields(array('Logo' => $filename,))->condition('Id',$dataId,'=')->execute();
+	$num_updated = db_update('chuang_startup')->fields(array('Logo' => $filename,'productimage' => $productfilename,))->condition('Id',$dataId,'=')->execute();
 }
-
+function updateProfileImage($filename,$dataId)
+{
+	global $user;
+	$num_updated = db_update('chuang_user')->fields(array('profile_image' => $filename))->condition('drupal_user_id',$dataId,'=')->execute();
+}
 
 /**********Start Up Page Functionality**************************/
 
 function startupPageComapnyListing()
 {
-	$query = db_select('startup', 's')
+	$query = db_select('chuang_startup', 's')
 	  ->fields ('s', array(
 					'Id',
 	                'CompanyName',
@@ -50,7 +76,7 @@ function startupPageComapnyListing()
 	$results = $query->execute();
 	$str = '<ul>';
 	while($data = $results->fetchAssoc())
-	$str .= '<li>'.$data['Id'].' '.$data['CompanyName'].' '.$data['HighLevelPitch'] .'</li>';
+	$str .= '<li>'.$data['Id'].' '.$data['CompanyName'].' '.$data[''] .' <img src="data:image/jpeg;base64,'.base64_encode( $result['Logo'] ).'"/></li>';
 	return $str.'</ul>';
 }
 
@@ -97,8 +123,49 @@ function RandomString($length)
 	
 	for($i=0;$i<$length;$i++) $randstring.=substr($chars,rand(0,$maxvalue),1);
 	$str = strtoupper(substr(md5($randstring),1,$length));
-	return $str;
+	return $str; 
 }
+
+function get_company_followers_count($sid){
+	 $result = db_select('chuang_follow', 's')
+                ->fields('s')
+                ->condition('to_id', $sid)
+                ->execute()
+                ->fetchAll();
+    if(count($result) > 0){
+    	return count($result);
+    }
+    else{
+    	return 0;
+    }
+}
+function get_user_following_count($uid){
+	 $result = db_select('chuang_follow', 's')
+                ->fields('s')
+                ->condition('from_id', $uid)
+                ->execute()
+                ->fetchAll();
+    if(count($result) > 0){
+    	return count($result);
+    }
+    else{
+    	return 0;
+    }
+}
+function get_user_followers_count($uid){
+	 $result = db_select('chuang_follow', 's')
+                ->fields('s')
+                ->condition('to_id', $uid)
+                ->execute()
+                ->fetchAll();
+    if(count($result) > 0){
+    	return count($result);
+    }
+    else{
+    	return 0;
+    }
+}
+
 
 
 

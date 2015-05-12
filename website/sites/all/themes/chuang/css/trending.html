@@ -134,74 +134,101 @@
                     </nav>
                 </div>
             </header>
+
             <!-- header ends here --> 
-            
-            
-            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
-             
-               <ul class="list_1">
-                <li><a href="#">By Popularity</a></li>
-                <li><a href="#">By Customers</a></li>
-                <li><a href="#">Recentaly published</a></li>
-               </ul>
-            
-            </div>
-            
-            <div class="col-lg-9 col-md-9 col-sm-9 col-xs-12">
-            </div>
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            <footer>
+            <div class="main_slider">
                 <div class="container">
-                    <span class="copyright">© All Rights Reserved @ starinvest</span>
-                    <ul class="social">
-                        <li><a href="#" class="fb"></a></li>
-                        <li><a href="#" class="tw"></a></li>
-                        <li><a href="#" class="in"></a></li>
-                    </ul>
-                    <ul class="footer-menu">
-                        <li><a href="#">Company Info</a></li>
-                        <li><a href="#">Startups</a></li>
-                        <li><a href="#">Investor</a></li>
-                        <li><a href="#">News</a></li>
-                        <li><a href="#">Recent post</a></li>
-                        <li><a href="#">In Trend</a></li>
-                        <li><a href="#">Contact Us</a></li>
-                    </ul>
+                    <h2 class="c-pagetitle left">News<i class="glyphicon glyphicon-menu-right"></i><span class="l-blue-text">Tech News</span></h2>
+
+
+                    <div class="news-section-container trending">
+                        <div class="trending-content">
+                            <!-- right content part -->
+                            <div class="content-part">
+                                <!-- top tabs bar -->
+                                <div class=" tab-outer">
+                                    <div class="tabs-holder">
+                                        <a href="#" class="button  btn-default active">Trending</a>
+                                        <a href="#" class="button btn-default ">Done Deals</a>
+                                        <a href="#" class="button  btn-default">Browse Deals</a>
+                                    </div>
+
+
+                                </div>
+                                <div class="filter-outer">
+                                    <ul class="c-time">
+                                        <li class="active"><a href="#" class="active">Weekly</a></li>
+                                        <li><a href="#" class="">Weekly</a></li>
+
+                                    </ul>
+                                    <a href="" class="blue-bg button share-btn">Share</a>
+                                </div>
+
+                                <!--content table starts here -->
+                                <table class="news-table trending">
+                                    <tr>
+                                        <th width="40"></th>
+                                        <th>Company</th>
+                                        <th width="80">Applicant</th>
+                                        <th width="70">Follows</th>
+                                    </tr>
+
+                                    <tr>
+                                        <td>1</td>
+                                        <td>
+                                            <div class="compny-logo">
+                                                <img src="images/pg_logo.jpg" alt=""/>
+                                            </div>
+                                            <div class="company-detail">
+                                                <b>P Group Ltd.</b>
+                                                <label>Aenean sollicitudin, lorem quis bibendum auctor</label>
+                                            </div>
+
+                                        </td>
+                                        <td>2</td>
+                                        <td>253</td>
+                                    </tr>
+                                    
+                                     <tr>
+                                        <td>2</td>
+                                        <td>
+                                            <div class="compny-logo">
+                                                <img src="images/pg_logo.jpg" alt=""/>
+                                            </div>
+                                            <div class="company-detail">
+                                                <b>P Group Ltd.</b>
+                                                <label>Aenean sollicitudin, lorem quis bibendum auctor</label>
+                                            </div>
+
+                                        </td>
+                                        <td>2</td>
+                                        <td>253</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- left sidebar -->
+                            <div class="left-part">
+                                <div class="list-group sort-type">
+                                    <a href="#" class="list-group-item active">
+                                        By Popularity
+                                    </a>
+                                    <a href="#" class="list-group-item">By Customers</a>
+                                    <a href="#" class="list-group-item">Recently Published</a>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
-            </footer>
+            </div>
         </div>
-        <script type="text/javascript" src="js/jquery.min.js"></script> 
-        <script type="text/javascript" src="js/bootstrap.min.js"></script> 
-        <script type="text/javascript" src="js/modernizr.js"></script> 
-        <!--Flex slider--> 
-        <script type="text/javascript" defer src="js/jquery.flexslider.js"></script> 
-        <script type="text/javascript">
 
-            $(window).load(function () {
-                $('.flexslider').flexslider();
-            });
 
-            $('a.dropdown-toggle').on('click', function (event) {
-                $(this).parent().toggleClass("open");
-            });
 
-            $('body').on('click', function (e) {
-                if (!$('.custom-dropdown li').is(e.target) && $('.custom-dropdown li').has(e.target).length === 0 && $('.open').has(e.target).length === 0) {
-                    $('.custom-dropdown li').removeClass('open');
-                }
-            });
 
-        </script>
+
+
+
     </body>
 </html>
