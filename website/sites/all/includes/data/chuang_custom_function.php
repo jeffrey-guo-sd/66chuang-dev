@@ -53,19 +53,50 @@ function insertUserProfileData($data)
 }
 function updateLogoName($filename,$dataId,$productfilename)
 {
+	$folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companylogo/';
+    $newThumnailfolderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companylogo/thumbnail/';
+    $date = date("Y-m-d H:i:s");
 	global $user;
-	$num_updated = db_update('chuang_startup')->fields(array('Logo' => $filename,'productimage' => $productfilename,))->condition('Id',$dataId,'=')->execute();
+	$result = db_select('chuang_startup', 's')
+                ->fields('s')
+                ->condition('Id', $dataId)
+                ->execute()
+                ->fetch();
+    if(count($result) > 0){
+    	$name = $result->company_logo_image;
+    	if(file_exists($folderPath.$name)):
+            unlink($folderPath.$name); 
+        endif;
+        if(file_exists($newThumnailfolderPath.$name)):
+            unlink($newThumnailfolderPath.$name); 
+        endif;
+    }
+	$num_updated = db_update('chuang_startup')->fields(array('company_logo_image' => $filename, 'productimage' => $productfilename,'modified_date' => $date,'modified_by' => $dataId,))->condition('Id',$dataId,'=')->execute();
 }
-function updateProfileImage($filename,$dataId)
-{
+function updateProfileImage($filename,$dataId){
+	$folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/profilephoto/';
+    $newThumnailfolderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/profilephoto/profilethumbnail/';
 	global $user;
-	$num_updated = db_update('chuang_user')->fields(array('profile_image' => $filename))->condition('drupal_user_id',$dataId,'=')->execute();
-}
+	$result = db_select('chuang_user', 's')
+                ->fields('s')
+                ->condition('drupal_user_id', $dataId)
+                ->execute()
+                ->fetch();
+    if(count($result) > 0){
+    	$name = $result->profile_image_name;
+    	if(file_exists($folderPath.$name)):
+            unlink($folderPath.$name); 
+        endif;
+        if(file_exists($newThumnailfolderPath.$name)):
+            unlink($newThumnailfolderPath.$name); 
+        endif;
+    }
+   $num_updated = db_update('chuang_user')->fields(array('profile_image_name' => $filename))->condition('drupal_user_id',$dataId,'=')->execute();
+} 
 
 /**********Start Up Page Functionality**************************/
 
-function startupPageComapnyListing()
-{
+function startupPageComapnyListing(){
 	$query = db_select('chuang_startup', 's')
 	  ->fields ('s', array(
 					'Id',

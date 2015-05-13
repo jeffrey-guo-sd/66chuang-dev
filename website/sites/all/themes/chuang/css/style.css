@@ -181,7 +181,7 @@ header .right_part input[type="button"] {
 /**********/
 
 nav {
-	background:url(../images/line_bg.jpg) no-repeat top center #333333;
+	/*background:url(../images/line_bg.jpg) no-repeat top center #333333;*/
 	min-height: 50px;
 }
 nav .navbar-default {
@@ -2033,6 +2033,11 @@ a.list-group-item
     float: left;
     width: 100%;
 }
+input.following, span.follow-button{
+   /*background: none repeat scroll 0 0 #00aaff !important;
+   color: #fff !important;*/
+ } 
+
 a.list-group-item.active
 {
     background: transparent;
@@ -2553,13 +2558,11 @@ padding-left: 0;
 .page-my-profile  .top-section1 .left1 > span , .page-profile  .top-section1 .left1 > span
 {
     border-radius: 50%;
-      line-height: 100px;
+      
 }
 .page-my-profile  .top-section1 .left1 > span img , .page-profile  .top-section1 .left1 > span img
 {
-  width: 100%;
-  padding: 0;
-  height: 100%;
+  
 }
 .page-my-profile .block2-outer.product , .page-profile .block2-outer.product
 {

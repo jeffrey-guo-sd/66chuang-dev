@@ -40,11 +40,11 @@
 			'access callback' => TRUE,
 		);
         $items['profile/update'] = array(
-                'title' => 'Profile',
-                'page callback' => 'Checklockunlock',
-                'access arguments' => array(STARTUPCOMPANYFORM),
-                'access callback' => 'user_access',
-                'type' => MENU_CALLBACK 
+            'title' => 'Profile',
+            'page callback' => 'Checklockunlock',
+            'access arguments' => array(STARTUPCOMPANYFORM),
+            'access callback' => 'user_access',
+            'type' => MENU_CALLBACK 
         );
         $items['experince/update'] = array(
                 'title' => 'Profile',
@@ -111,8 +111,8 @@
             $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
             foreach($startup_data as $val){
                $startupdata = drupal_custom_startup_singledata($val->startup_id);
-               if(!empty($startupdata->Logo)){
-                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$startupdata->Logo;
+               if(!empty($startupdata->company_logo_image)){
+                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/thumbnail/'.$startupdata->company_logo_image;
                 }
                 else{
                     $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
@@ -163,6 +163,7 @@
        $image_name=$_FILES["files"]["name"]['profileimage'];
        $filename = stripslashes($_FILES['files']['name']['profileimage']);
        $folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/profilephoto/';
+       $newThumnailfolderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/profilephoto/profilethumbnail/';
        if(!empty($filename)): 
             $extension = getExtension($filename);  // get file name
             $extension = strtolower($extension);    // get extension
@@ -173,10 +174,26 @@
                 $filename =  'PP_'.$randNum.'_'.$id.'.'.$extension;  // filename
                 if(file_exists($folderPath.$filename)):
                     unlink($folderPath.$filename); 
-                endif; 
-                move_uploaded_file($path,$folderPath.$filename);         
+                endif;
+                move_uploaded_file($path, $folderPath.$filename);     
+                copy($folderPath.$filename,  $newThumnailfolderPath.$filename);
+                if(preg_match('/[.](jpg)$/', $filename)) {
+                   $im = imagecreatefromjpeg($newThumnailfolderPath . $filename);
+                } else if (preg_match('/[.](gif)$/', $filename)) {
+                    $im = imagecreatefromgif($newThumnailfolderPath . $filename);
+                } else if (preg_match('/[.](png)$/', $filename)) {
+                    $im = imagecreatefrompng($newThumnailfolderPath . $filename);
+                }
+                $final_width_of_image = 100;
+                $ox = imagesx($im);
+                $oy = imagesy($im);
+                $nx = $final_width_of_image;
+                $ny = 100;
+                $nm = imagecreatetruecolor($nx, $ny);
+                imagecopyresized($nm, $im, 0,0,0,0,$nx,$ny,$ox,$oy);
+                imagejpeg($nm, $newThumnailfolderPath . $filename);                   
             endif; 
-            updateProfileImage($filename,$id);  
+            updateProfileImage($filename,$id);   
         endif;
         $date = date("Y-m-d H:i:s");
         db_update('chuang_user')->fields(array(
@@ -190,11 +207,11 @@
                 ->execute();
         $profile_data = drupal_custom_profile_data($user->uid);
         $startup_data = drupal_custom_startup_data($user->uid);
-        $profileImage = $profile_data->profile_image;
+        $profileImage = $profile_data->profile_image_name;
         $name = $profile_data->name;
         $miniresume = $profile_data->mini_resume;
         if(!empty($profileImage)){
-            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/profilethumbnail/'.$profileImage;
         }
         else{
             $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
@@ -217,11 +234,11 @@
         $viewuserid = arg(1);
         $profile_data = drupal_custom_profile_data($viewuserid);
         $startup_data = drupal_custom_startup_data($viewuserid);
-        $profileImage = $profile_data->profile_image;
+        $profileImage = $profile_data->profile_image_name;
         $name = $profile_data->name;
         $miniresume = $profile_data->mini_resume;
         if(!empty($profileImage)){
-            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/profilethumbnail/'.$profileImage;
         }
         else{
             $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
@@ -326,8 +343,8 @@
             foreach($startup_data as $val){
                  $i++;
                $startupdata = drupal_custom_startup_singledata($val->startup_id);
-               if(!empty($startupdata->Logo)){
-                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$startupdata->Logo;
+               if(!empty($startupdata->company_logo_image)){
+                    $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/thumbnail/'.$startupdata->company_logo_image;
                 }
                 else{
                     $logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
@@ -445,14 +462,14 @@
 			->condition('Id', $id)
 			->execute()
 			->fetch();
-		$logo = $result->Logo;
+		$logo = $result->company_logo_image;
         $founderId = $result->created_by;
         $profile_data = drupal_custom_profile_data($founderId);
-        $profileImage = $profile_data->profile_image;
+        $profileImage = $profile_data->profile_image_name;
         $name = $profile_data->name;
         $miniresume = $profile_data->mini_resume;
         if(!empty($profileImage)){
-            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+            $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/profilethumbnail/'.$profileImage;
         }
         else{
             $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
@@ -460,7 +477,7 @@
         $template_path = $base_url.'/'.drupal_get_path('theme', 'chuang');
        // echo '<pre>'; print_r($result); die();
 		if(!empty($logo)){
-			$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$logo;
+			$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/thumbnail/'.$logo;
 		}
 		else{
 			$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
@@ -525,14 +542,14 @@
                                     ->condition('to_id', $id)
                                     ->execute()
                                     ->fetchAll();
-                                    if(count($followeresultcount) > 0){
+                                   // if(count($followeresultcount) > 0){
                                         $count = count($followeresultcount);
-                                    }
+                                    //}
                             $html .= '</div>
                         </div>
                         <div class="bottom-section1">
                             <ul>
-                                <li><a href="#">Overview</a></li>
+                                <li><a href="'.$base_url.'/startup/'.$arg.'" class="active">Overview</a></li>
                                 <li><a href="#">Events</a></li>
                                 <li><a href="'.$base_url.'/startup/'.$arg.'/followers">Followers<span class="countfollower">'.$count.'</span></a></li>
 
@@ -571,11 +588,11 @@
             foreach($allTeamMembers as $val){
                  $i++;     
                 $profile_data = drupal_custom_profile_data($val->user_id);
-                 $profileImage = $profile_data->profile_image;
+                 $profileImage = $profile_data->profile_image_name;
                 $name = $profile_data->name;
               
                 if(!empty($profileImage)){
-                    $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profileImage;
+                    $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/profilethumbnail/'.$profileImage;
                 }
                 else{
                     $profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
@@ -747,7 +764,7 @@
 		);
 		$rows = array();
 		$query = db_select('chuang_startup', 'd');
-		$query->fields('d', array('Id','CompanyName','HighLevelPitch','Logo'));
+		$query->fields('d', array('Id','CompanyName','HighLevelPitch','company_logo_image'));
 		$numrows = $query->execute()->rowCount();
 		$result = $query->extend('PagerDefault')->limit(PAGER)->execute();
 		$rows = array();
@@ -755,8 +772,8 @@
 		foreach ($result as $row) {
 			$i++;
 			$companyname = $row->CompanyName;
-			if(!empty($row->Logo)){
-				$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/'.$row->Logo;
+			if(!empty($row->company_logo_image)){
+				$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/thumbnail/'.$row->company_logo_image;
 			}
 			else{
 				$logoUrl = $base_url.'/'. path_to_theme().'/images/companylogo/sample_logo.png';
@@ -820,7 +837,7 @@
 		$name = $profile_data->name;
 		$miniresume = $profile_data->mini_resume;
 		if(!empty($profile_data->profile_image)){
-			$profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/'.$profile_data->profile_image;
+			$profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/profilethumbnail/'.$profile_data->profile_image;
 		}
 		else{
 			$profileImage = $base_url.'/'. path_to_theme().'/images/profilephoto/user_default.jpg';
@@ -935,6 +952,7 @@
 		$form['logo'] = array(
 			'#type' => 'file',
 			'#title' => t(COMPANYLOGO),
+            '#description' => t('Please add image with size 100X100'),
 			'#attributes' => array('class'=> array('companylogo')),
 		);
 		$form['highconceptpitch'] = array(
@@ -952,7 +970,10 @@
 		$form['productimage'] = array(
 			'#type' => 'file',
 			'#title' => t(PRODUCTIMAGE),
+            /*'#description' => t('Multiple files can be added by pressing "Shift" key while browsing for files.'),*/
 			'#attributes' => array('class'=> array('productimage')),
+            /*'#attributes' => array('multiple' => 'multiple'),
+            '#name' => 'prodcutimage[]',*/
 		);	
 		$form['product'] = array(
 			'#type' => 'textarea',
@@ -1117,8 +1138,11 @@
 	}
 	/**************Company Profile Submit*****************/
 	function startup_company_form_submit($form, &$form_state){
-		//echo '<pre>'; print_r($_POST); exit;
+	   //echo '<pre>'; print_r(count($_FILES['prodcutimage']['name'])); exit;
 		global $user;
+        $num_files = count($_FILES['productimage']['name']);
+        //echo $num_files; die();
+      //  echo '<pre>'; print_r($_FILES['files']['productimage']); 
 		$path=$_FILES["files"]["tmp_name"]['logo'];
 		$productpath=$_FILES["files"]["tmp_name"]['productimage'];
 		$image_name=$_FILES["files"]["name"]['logo'];
@@ -1126,6 +1150,7 @@
 		$filename = stripslashes($_FILES['files']['name']['logo']);
 		$product_filename = stripslashes($_FILES['files']['name']['productimage']);
 		$folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companylogo/';
+        $thumbnailfolderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companylogo/thumbnail/';
 		$productfolderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/companyproduct/';
 		if(!empty($filename)): 
 			$extension = getExtension($filename);  // get file name
@@ -1135,21 +1160,38 @@
 			if($extension!= JPG and $extension!= JPEG and $extension!= GIF and $extension!= PNG ):
 				form_set_error('file', t(FILEEXTENSION));
 			else:
-				$id = insertCompanyProfileData($form_state['values']);
+               	$id = insertCompanyProfileData($form_state['values']);
 				$randNum = RandomString(6);
 				$filename =  'BA_'.$randNum.'_'.$id.'.'.$extension;  // filename
 				$productfilename =  'CA_'.$randNum.'_'.$id.'.'.$productextension;  // filename
 				if(file_exists($folderPath.$filename)):
 					unlink($folderPath.$filename); 
 				endif; 
+                if(file_exists($thumbnailfolderPath.$filename)):
+                    unlink($folderPath.$filename); 
+                endif; 
 				if(file_exists($folderPath.$productfilename)):
 					unlink($companyfolderPath.$productfilename); 
 				endif;
                 move_uploaded_file($path,$folderPath.$filename);		 
 				move_uploaded_file($productpath,$folderPath.$productfilename);
+                copy($folderPath.$filename,  $thumbnailfolderPath.$filename);
+                if(preg_match('/[.](jpg)$/', $filename)) {
+                   $im = imagecreatefromjpeg($thumbnailfolderPath . $filename);
+                } else if (preg_match('/[.](gif)$/', $filename)) {
+                    $im = imagecreatefromgif($thumbnailfolderPath . $filename);
+                } else if (preg_match('/[.](png)$/', $filename)) {
+                    $im = imagecreatefrompng($thumbnailfolderPath . $filename);
+                }
+                $ox = imagesx($im);
+                $oy = imagesy($im);
+                $nx = 100;
+                $ny = 100;
+                $nm = imagecreatetruecolor($nx, $ny);
+                imagecopyresized($nm, $im, 0,0,0,0,$nx,$ny,$ox,$oy);
+                imagejpeg($nm, $thumbnailfolderPath . $filename); 
 			endif; 
-
-			updateLogoName($filename,$id,$productfilename);			
+           	updateLogoName($filename,$id,$productfilename);			
 			drupal_set_message(COMPANYPROFILESUCCESSMESSAGE);
 			drupal_goto('company');
 		endif;
@@ -1241,7 +1283,7 @@
 		$image_name=$_FILES["files"]["name"]['profileimage'];
 		$filename = stripslashes($_FILES['files']['name']['profileimage']);
 		$folderPath = DRUPAL_ROOT.'/sites/all/themes/chuang/images/profilephoto/';
-		if(!empty($filename)): 
+        if(!empty($filename)): 
 			$extension = getExtension($filename);  // get file name
 			$extension = strtolower($extension);	// get extension
 			if($extension!= JPG and $extension!= JPEG and $extension!= GIF and $extension!= PNG):
@@ -1251,8 +1293,9 @@
 				$filename =  'PP_'.$randNum.'_'.$id.'.'.$extension;  // filename
 				if(file_exists($folderPath.$filename)):
 					unlink($folderPath.$filename); 
-				endif; 
-				move_uploaded_file($path,$folderPath.$filename);		 
+				endif;
+              	move_uploaded_file($path,$folderPath.$filename);
+
 			endif; 
 			updateProfileImage($filename,$id);	
 		endif;
@@ -1269,8 +1312,8 @@
 				->execute();
 		$form_state['rebuild'] = TRUE;
         
-	}	
-	
+	}
+
 	
 
 
